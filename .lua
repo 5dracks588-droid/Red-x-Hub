@@ -151,31 +151,9 @@ local function isPunchTool(tool)
     return false
 end
 
--- Multiplicador de velocidade quando o Auto Punch estiver ATIVADO
-local VELOCIDADE_RAPIDA = 10 
-
-local function updatePunchAnimationsSpeed()
-    pcall(function()
-        local animator = Humanoid:FindFirstChildWhichIsA("Animator") or Humanoid
-        if animator then
-            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                local animName = track.Animation and track.Animation.Name:lower() or ""
-                -- Se o Auto Punch estiver ligado, acelera tudo (ida e volta). Se estiver desligado, volta para 1.0 (normal)
-                if Flags.AutoPunch then
-                    track:AdjustSpeed(VELOCIDADE_RAPIDA)
-                    track.Priority = Enum.AnimationPriority.Action4 -- Prioridade máxima para não travar a volta
-                else
-                    track:AdjustSpeed(1.0)
-                end
-            end
-        end
-    end)
-end
-
--- Loop do Auto Punch
-task.spawn(function()
+-task.spawn(function()
     while true do
-        task.wait(0.001)
+        task.wait(0.01)
         if Flags.AutoPunch and not isDead then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
@@ -185,16 +163,11 @@ task.spawn(function()
                 end
                 local tool = getPunchTool()
                 if tool then
-                    if tool.Parent == LP.Backpack then 
-                        tool.Parent = Character 
-                        task.wait(0.01) 
-                    end
+                    if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
                     tool:Activate()
                 end
             end)
         end
-        -- Fica constantemente checando e aplicando a velocidade (rápida ou normal)
-        updatePunchAnimationsSpeed()
     end
 end)
 
