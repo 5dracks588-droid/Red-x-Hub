@@ -153,7 +153,7 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(0.05)
+        task.wait(0.02) -- Reduzido levemente para responder mais rápido
         if Flags.AutoPunch and not isDead then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
@@ -168,16 +168,22 @@ task.spawn(function()
                         task.wait(0.02) 
                     end
                     
-                    -- Ativa a ferramenta normalmente para garantir que o soco funcione
+                    -- 1. Força a ativação do item para o jogo validar o ganho/soco
                     tool:Activate()
                     
-                    -- Interrompe instantaneamente qualquer animação de soco iniciada
+                    -- 2. Dispara o Remote em paralelo para garantir o registro do soco
+                    if LP:FindFirstChild("muscleEvent") then
+                        LP.muscleEvent:FireServer("punchClick")
+                    end
+                    
+                    -- 3. Limpa e para instantaneamente qualquer animação visual de soco
                     local humanoid = Character:FindFirstChildOfClass("Humanoid")
                     if humanoid then
                         local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
                         for _, playingTrack in pairs(animator:GetPlayingAnimationTracks()) do
-                            -- Corta animações que tenham nomes relacionados a ataque/soco
-                            if playingTrack.Name:lower():find("punch") or playingTrack.Name:lower():find("attack") then
+                            local animName = playingTrack.Name:lower()
+                            -- Interrompe qualquer animação que lembre socos ou ataques
+                            if animName:find("punch") or animName:find("attack") or animName:find("fist") or animName:find("hit") then
                                 playingTrack:Stop()
                             end
                         end
@@ -187,7 +193,6 @@ task.spawn(function()
         end
     end
 end)
-
 
 Humanoid.Died:Connect(function()
     isDead = true
