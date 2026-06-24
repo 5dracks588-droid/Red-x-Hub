@@ -164,36 +164,23 @@ task.spawn(function()
                 local tool = getPunchTool()
                 if tool then
                     if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
-
-                    -- ── Desativa animação da tool enquanto Auto Soco estiver ON ──
-                    pcall(function()
-                        local animate = tool:FindFirstChild("Animate")
-                            or tool:FindFirstChildWhichIsA("LocalScript")
-                            or tool:FindFirstChildWhichIsA("Script")
-                        if animate then animate.Disabled = true end
-                    end)
-
-                    -- ── Desativa sons do soco ──
-                    pcall(function()
-                        for _, s in ipairs(tool:GetDescendants()) do
-                            if s:IsA("Sound") then s.Volume = 0 end
-                        end
-                    end)
-
-                    -- ── Ativa o soco sem animação visual ──
+                    
+                    -- ── Dá o soco ──
                     tool:Activate()
 
-                    -- ── Suprime animação do Humanoid durante o soco ──
-                    pcall(function()
-                        local animator = Humanoid:FindFirstChildWhichIsA("Animator")
-                        if animator then
-                            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                                local name = track.Name:lower()
-                                if name:find("punch") or name:find("attack") or name:find("swing") or name:find("hit") then
-                                    track:Stop(0)
+                    -- ── Para só a animação de soco, não o idle ──
+                    task.defer(function()
+                        pcall(function()
+                            local animator = Humanoid:FindFirstChildWhichIsA("Animator")
+                            if animator then
+                                for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                                    local name = track.Name:lower()
+                                    if name:find("punch") or name:find("attack") or name:find("swing") or name:find("hit") then
+                                        track:Stop(0)
+                                    end
                                 end
                             end
-                        end
+                        end)
                     end)
                 end
             end)
