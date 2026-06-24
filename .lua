@@ -232,31 +232,6 @@ end
 -- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
     while true do
-        task.wait(0.001)
-        if Flags.AutoPunch and not isDead then
-            pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and not isPunchTool(equipped) then
-                    equipped.Parent = LP.Backpack
-                    task.wait(0.01)
-                end
-                local tool = getPunchTool()
-                if tool then
-                    if tool.Parent == LP.Backpack then 
-                        tool.Parent = Character 
-                        task.wait(0.01) 
-                    end
-                    tool:Activate()
-                    speedUpPunchAnimations()
-                end
-            end)
-        end
-    end
-end)
-
--- Loop do Auto Punch Otimizado e Acelerado
-task.spawn(function()
-    while true do
         task.wait(0.001) -- Cliques na velocidade máxima permitida pelo motor
         if Flags.AutoPunch and not isDead then
             pcall(function()
