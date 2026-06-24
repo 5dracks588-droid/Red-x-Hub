@@ -553,7 +553,6 @@ FarmTab:Toggle({
     Value = false,
     Callback = function(Value)
         if Value then
-            -- ── Salva a posição atual quando ativa ──
             lockPos = HRP.CFrame
             task.spawn(function()
                 while Value do
@@ -572,15 +571,44 @@ FarmTab:Toggle({
     end,
 })
 
+-- ── loop do auto farm (o que tinha sumido e fazia o farm não funcionar) ──
 task.spawn(function()
-    task.wait(1)
-    for _, entry in ipairs(ROCKS) do
-        local data = createCloneForEntry(entry)
-        if data then rockData[entry.label] = data end
-        task.wait(0.2)
+    while task.wait(0.1) do
+        local char = LP.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            if farmConfig.autoWeight then
+                local tool = LP.Backpack:FindFirstChild("Weight") or char:FindFirstChild("Weight")
+                if tool then
+                    if tool.Parent ~= char then tool.Parent = char end
+                    pcall(function() LP.muscleEvent:FireServer("rep") end)
+                end
+            end
+            if farmConfig.autoSitups then
+                local tool = LP.Backpack:FindFirstChild("Situps") or char:FindFirstChild("Situps")
+                if tool then
+                    if tool.Parent ~= char then tool.Parent = char end
+                    pcall(function() LP.muscleEvent:FireServer("rep") end)
+                end
+            end
+            if farmConfig.autoPushups then
+                local tool = LP.Backpack:FindFirstChild("Pushups") or char:FindFirstChild("Pushups")
+                if tool then
+                    if tool.Parent ~= char then tool.Parent = char end
+                    pcall(function() LP.muscleEvent:FireServer("rep") end)
+               end
+            end
+            if farmConfig.autoHandstands then
+                local tool = LP.Backpack:FindFirstChild("Handstands") or char:FindFirstChild("Handstands")
+                if tool then
+                    if tool.Parent ~= char then tool.Parent = char end
+                    pcall(function() LP.muscleEvent:FireServer("rep") end)
+                end
+            end
+        end
     end
 end)
 
+-- ── aba de teleportes ──
 local TeleportTab = Window:Tab({
     Title = "Teleports",
     Icon = "map-pin"
@@ -605,6 +633,7 @@ TeleportTab:Button({Title = "Frozen Island", Callback = function() teleportTo(Ve
 TeleportTab:Button({Title = "Tiny Island", Callback = function() teleportTo(Vector3.new(-36, 15, 1889)) end})
 TeleportTab:Button({Title = "Secret Island", Callback = function() teleportTo(Vector3.new(1951, 21, 6185)) end})
 
+-- ── aba auto rocks ──
 local CombateTab = Window:Tab({
     Title = "Auto Rocks",
     Icon = "mountain"
@@ -652,6 +681,7 @@ for _, entry in ipairs(ROCKS) do
     rockToggles[lbl] = toggle
 end
 
+-- ── inicializador das pedras (apenas uma vez no final) ──
 task.spawn(function()
     task.wait(1)
     for _, entry in ipairs(ROCKS) do
