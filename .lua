@@ -707,13 +707,65 @@ task.spawn(function()
     end
 end)
 
-local NoclipEnabled = false
-local FlyEnabled = false
-local FlySpeed = 70
-local bodyVelocity
-local bodyGyro
-local flyConnection
-local moveVector = Vector3.zero
+local PlayerTab = Window:Tab({
+    Title = "Player",
+    Icon = "user"
+})
+
+PlayerTab:Slider({
+    Title = "Velocidade",
+    Step = 1,
+    Value = { Min = 16, Max = 500, Default = 16 },
+    Callback = function(v)
+        pcall(function() LP.Character.Humanoid.WalkSpeed = v end)
+    end
+})
+
+PlayerTab:Slider({
+    Title = "Pulo",
+    Step = 1,
+    Value = { Min = 50, Max = 500, Default = 50 },
+    Callback = function(v)
+        pcall(function() 
+            local hum = LP.Character.Humanoid
+            hum.JumpPower = v 
+            hum.UseJumpPower = true
+        end)
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Pulo Infinito",
+    Default = false,
+    Callback = function(v)
+        InfiniteJump = v
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "NoClip",
+    Default = false,
+    Callback = function(v)
+        NoclipEnabled = v
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Fly",
+    Default = false,
+    Callback = function(v)
+        if v then StartFly() else StopFly() end
+    end
+})
+
+PlayerTab:Slider({
+    Title = "Fly Speed",
+    Step = 5,
+    Value = { Min = 10, Max = 200, Default = 70 },
+    Callback = function(v)
+        FlySpeed = v
+    end
+})
 
 -- Sistema de voo e pulo infinito adaptados
 local UserInputService = game:GetService("UserInputService")
