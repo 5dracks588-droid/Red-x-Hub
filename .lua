@@ -152,7 +152,7 @@ local function isPunchTool(tool)
 end
 
 -- Variable para controlar a velocidade da animação do soco (Ajuste aqui)
-local PUNCH_SPEED_MULTIPLIER = 2.5 
+local PUNCH_SPEED_MULTIPLIER = 10 
 
 -- Função para acelerar as animações de soco ativas
 local function speedUpPunchAnimations()
