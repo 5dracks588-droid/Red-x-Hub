@@ -79,138 +79,11 @@ local ROCKS = {
     },
 }
 
-
-    
 local BLACKLIST = {
     "crystal","crystals","egg","eggs","pet","pets","aura","spin","wheel","portal","teleport","npc",
     "zone","pad","button","gui","billboard","sign","coin","gem","diamond","orb","ring","vip","donate",
     "shop","store","character","humanoidrootpart","head","torso","baseplate","terrain","camera","anoleg_rock_clone",
 }
-
--- VARIÁVEIS DO FLY IDENTICAS AO MM2 (ADAPTADAS PARA O SEU LP)
-local FlyEnabled = false
-local FlySpeed = 70
-
-local bodyVelocity
-local bodyGyro
-local flyConnection
-
-local moveVector = Vector3.zero
-
--- Usando o seu 'LP' para não quebrar o script
-local Character = LP.Character or LP.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-
-local function SetupCharacter()
-    Character = LP.Character or LP.CharacterAdded:Wait()
-    Humanoid = Character:WaitForChild("Humanoid")
-    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
-end
-
-LP.CharacterAdded:Connect(SetupCharacter)
-
-local function StartFly()
-    if FlyEnabled then return end
-    FlyEnabled = true
-
-    Humanoid.PlatformStand = true
-
-    bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Velocity = Vector3.zero
-    bodyVelocity.Parent = HumanoidRootPart
-
-    bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bodyGyro.P = 100000
-    bodyGyro.CFrame = Camera.CFrame
-    bodyGyro.Parent = HumanoidRootPart
-
-    flyConnection = RunService.RenderStepped:Connect(function()
-        local camCF = Camera.CFrame
-        local forward = camCF.LookVector
-        local right = camCF.RightVector
-
-        local direction = Vector3.zero
-
-        direction += forward * moveVector.Z
-        direction += right * (moveVector.X * 0.45)
-
-        if direction.Magnitude > 0 then
-            bodyVelocity.Velocity = direction.Unit * FlySpeed
-        else
-            bodyVelocity.Velocity = Vector3.zero
-        end
-
-        bodyGyro.CFrame = CFrame.new(
-            HumanoidRootPart.Position,
-            HumanoidRootPart.Position + Camera.CFrame.LookVector
-        )
-    end)
-end
-
-local function StopFly()
-    FlyEnabled = false
-
-    Humanoid.PlatformStand = false
-
-    if flyConnection then
-        flyConnection:Disconnect()
-        flyConnection = nil
-    end
-
-    if bodyVelocity then
-        bodyVelocity:Destroy()
-        bodyVelocity = nil
-    end
-
-    if bodyGyro then
-        bodyGyro:Destroy()
-        bodyGyro = nil
-    end
-end
-
--- TECLADO IGUAL MM2
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-
-    if input.KeyCode == Enum.KeyCode.W then
-        moveVector = Vector3.new(moveVector.X, 0, -1)
-    elseif input.KeyCode == Enum.KeyCode.S then
-        moveVector = Vector3.new(moveVector.X, 0, 1)
-    elseif input.KeyCode == Enum.KeyCode.A then
-        moveVector = Vector3.new(-1, 0, moveVector.Z)
-    elseif input.KeyCode == Enum.KeyCode.D then
-        moveVector = Vector3.new(1, 0, moveVector.Z)
-    end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then
-        moveVector = Vector3.new(moveVector.X, 0, 0)
-    elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then
-        moveVector = Vector3.new(0, 0, moveVector.Z)
-    end
-end)
-
--- MOBILE IGUAL MM2
-RunService.RenderStepped:Connect(function()
-    if not Character or not Humanoid then return end
-
-    local moveDir = Humanoid.MoveDirection
-
-    if moveDir.Magnitude > 0 then
-        local relative = Camera.CFrame:VectorToObjectSpace(moveDir)
-        moveVector = Vector3.new(
-            relative.X,
-            0,
-            -relative.Z
-        )
-    else
-        moveVector = Vector3.zero
-    end
-end)
 
 local function isBlacklisted(name)
     local low = name:lower()
@@ -223,8 +96,7 @@ end
 local function getObjPos(obj)
     local p = nil
     pcall(function()
-        if obj:IsA("BasePart") then 
-            p = obj.Position
+        if obj:IsA("BasePart") then p = obj.Position
         elseif obj:IsA("Model") then
             p = obj.PrimaryPart and obj.PrimaryPart.Position or obj:GetBoundingBox().Position
         end
@@ -232,10 +104,57 @@ local function getObjPos(obj)
     return p
 end
 
+local function getObjSize(obj)
+    local s = Vector3.new(8,8,8)
+    pcall(function()
+        if obj:IsA("BasePart") then s = obj.Size
+        elseif obj:IsA("Model") then local _, b = obj:GetBoundingBox(); s = b end
+    end)
+    return s.Magnitude > 0 and s or Vector3.new(8,8,8)
+end
+
+local function getAllParts(obj)
+    local parts = {}
+    if obj:IsA("BasePart") then table.insert(parts, obj)
+    elseif obj:IsA("Model") then
+        for _, v in ipairs(obj:GetDescendants()) do
+            if v:IsA("BasePart") then table.insert(parts, v) end
+        end
+    end
+    return parts
+end
+
+local function isValidObj(obj)
+    if not (obj:IsA("Model") or obj:IsA("BasePart")) then return false end
+    if isBlacklisted(obj.Name) or obj.Name == "ANOLEG_ROCK_CLONE" then return false end
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p.Character and obj:IsDescendantOf(p.Character) then return false end
+    end
+    return true
+end
+
+function getPunchTool()
+    for _, name in ipairs({"Punch","PunchTool","Fist","Glove","Boxing Gloves","Punching Gloves"}) do
+        local t = LP.Backpack:FindFirstChild(name) or Character:FindFirstChild(name)
+        if t then return t end
+    end
+    for _, v in ipairs(LP.Backpack:GetChildren()) do if v:IsA("Tool") then return v end end
+    return nil
+end
+
+local function isPunchTool(tool)
+    if not tool then return false end
+    local low = tool.Name:lower()
+    for _, n in ipairs({"punch","punchtool","fist","glove","boxing"}) do
+        if low:find(n, 1, true) then return true end
+    end
+    return false
+end
+
 -- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
     while true do
-        task.wait(0.001)
+        task.wait(0.001) -- Cliques na velocidade máxima permitida pelo motor
         if Flags.AutoPunch and not isDead then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
@@ -250,7 +169,7 @@ task.spawn(function()
                         task.wait(0.01) 
                     end
                     tool:Activate()
-                    speedUpPunchAnimations()
+                    speedUpPunchAnimations() -- Força a animação a ir mais rápido após ativar
                 end
             end)
         end
@@ -424,6 +343,11 @@ local function activateRock(label)
             touchRealRock(data)
         end
     end)
+end
+
+local function deactivateRock(label)
+    if activeRockLabel ~= label then return end
+    stopActiveRock()
 end
 
 local function unequipTool(toolName)
@@ -689,157 +613,6 @@ task.spawn(function()
     end
 end)
 
-local PlayerTab = Window:Tab({
-    Title = "Player",
-    Icon = "user"
-})
-
-PlayerTab:Slider({
-    Title = "Velocidade",
-    Step = 1,
-    Value = { Min = 16, Max = 500, Default = 16 },
-    Callback = function(v)
-        pcall(function() LP.Character.Humanoid.WalkSpeed = v end)
-    end
-})
-
-PlayerTab:Slider({
-    Title = "Pulo",
-    Step = 1,
-    Value = { Min = 50, Max = 500, Default = 50 },
-    Callback = function(v)
-        pcall(function() 
-            local hum = LP.Character.Humanoid
-            hum.JumpPower = v 
-            hum.UseJumpPower = true
-        end)
-    end
-})
-
-PlayerTab:Toggle({
-    Title = "Pulo Infinito",
-    Default = false,
-    Callback = function(v)
-        InfiniteJump = v
-    end
-})
-
-PlayerTab:Toggle({
-    Title = "NoClip",
-    Default = false,
-    Callback = function(v)
-        NoclipEnabled = v
-    end
-})
-
-PlayerTab:Toggle({
-    Title = "Fly",
-    Default = false,
-    Callback = function(v)
-        if v then StartFly() else StopFly() end
-    end
-})
-
-PlayerTab:Slider({
-    Title = "Fly Speed",
-    Step = 5,
-    Value = { Min = 10, Max = 200, Default = 70 },
-    Callback = function(v)
-        FlySpeed = v
-    end
-})
-
--- Sistema de voo e pulo infinito adaptados
-local UserInputService = game:GetService("UserInputService")
-
-local function StartFly()
-    if FlyEnabled then return end
-    FlyEnabled = true
-    local char = LP.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    if not hum or not hrp then return end
-
-    hum.PlatformStand = true
-    bodyVelocity = Instance.new("BodyVelocity")
-    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bodyVelocity.Velocity = Vector3.zero
-    bodyVelocity.Parent = hrp
-
-    bodyGyro = Instance.new("BodyGyro")
-    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bodyGyro.P = 100000
-    bodyGyro.CFrame = Camera.CFrame
-    bodyGyro.Parent = hrp
-
-    flyConnection = RunService.RenderStepped:Connect(function()
-        local camCF = Camera.CFrame
-        local forward = camCF.LookVector
-        local right = camCF.RightVector
-        local direction = Vector3.zero
-
-        direction = direction + forward * moveVector.Z
-        direction = direction + right * (moveVector.X * 0.45)
-
-        if direction.Magnitude > 0 then
-            bodyVelocity.Velocity = direction.Unit * FlySpeed
-        else
-            bodyVelocity.Velocity = Vector3.zero
-        end
-        bodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + Camera.CFrame.LookVector)
-    end)
-end
-
-local function StopFly()
-    FlyEnabled = false
-    local char = LP.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    if hum then hum.PlatformStand = false end
-    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
-    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
-    if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
-end
-
-UserInputService.InputBegan:Connect(function(input, gp)
-    if gp then return end
-    if input.KeyCode == Enum.KeyCode.W then moveVector = Vector3.new(moveVector.X, 0, -1)
-    elseif input.KeyCode == Enum.KeyCode.S then moveVector = Vector3.new(moveVector.X, 0, 1)
-    elseif input.KeyCode == Enum.KeyCode.A then moveVector = Vector3.new(-1, 0, moveVector.Z)
-    elseif input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(1, 0, moveVector.Z) end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then moveVector = Vector3.new(moveVector.X, 0, 0)
-    elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(0, 0, moveVector.Z) end
-end)
-
-RunService.RenderStepped:Connect(function()
-    local char = LP.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    if hum and hum.MoveDirection.Magnitude > 0 then
-        local relative = Camera.CFrame:VectorToObjectSpace(hum.MoveDirection)
-        moveVector = Vector3.new(relative.X, 0, -relative.Z)
-    elseif not FlyEnabled then
-        moveVector = Vector3.zero
-    end
-end)
-
-UserInputService.JumpRequest:Connect(function()
-    if InfiniteJump then
-        local char = LP.Character
-        local hum = char and char:FindFirstChild("Humanoid")
-        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
-    end
-end)
-
-RunService.Stepped:Connect(function()
-    if NoclipEnabled and LP.Character then
-        for _, part in pairs(LP.Character:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
-        end
-    end
-end)
-
 -- ── aba de teleportes ──
 local TeleportTab = Window:Tab({
     Title = "Teleports",
@@ -922,3 +695,4 @@ task.spawn(function()
         task.wait(0.2)
     end
 end)
+
