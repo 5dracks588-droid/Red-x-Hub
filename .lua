@@ -151,23 +151,6 @@ local function isPunchTool(tool)
     return false
 end
 
--- Função para acelerar as animações do soco
-local function speedUpPunchAnimations()
-    pcall(function()
-        local animator = Humanoid:FindFirstChildWhichIsA("Animator") or Humanoid
-        if animator then
-            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                -- Verifica se a animação é de ataque/soco ou se o AutoPunch está ativo
-                if Flags.AutoPunch (10.00
-                    -- Altera a velocidade da animação para o multiplicador definido (VELOCIDADE_RAPIDA = 10)
-                    track:AdjustSpeed(VELOCIDADE_RAPIDA)
-                    track.Priority = Enum.AnimationPriority.Action4 -- Garante prioridade máxima para não travar
-                end
-            end
-        end
-    end)
-end
-
 -- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
     while true do
