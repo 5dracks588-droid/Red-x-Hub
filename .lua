@@ -158,7 +158,7 @@ local function speedUpPunchAnimations()
         if animator then
             for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
                 -- Verifica se a animação é de ataque/soco ou se o AutoPunch está ativo
-                if Flags.AutoPunch then
+                if Flags.AutoPunch (10.00
                     -- Altera a velocidade da animação para o multiplicador definido (VELOCIDADE_RAPIDA = 10)
                     track:AdjustSpeed(VELOCIDADE_RAPIDA)
                     track.Priority = Enum.AnimationPriority.Action4 -- Garante prioridade máxima para não travar
