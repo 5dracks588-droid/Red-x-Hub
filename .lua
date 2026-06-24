@@ -151,29 +151,23 @@ local function isPunchTool(tool)
     return false
 end
 
--- Configurações de velocidade e corte
-local PUNCH_SPEED_MULTIPLIER = 4.0 -- Velocidade da animação modificada
-local ANIMATION_CUT_DELAY = 0.05   -- Tempo em segundos (0.05 = 50 milissegundos) para cortar a animação
+local PUNCH_SPEED_MULTIPLIER = 5.0 -- Aumentei para 5.0 para ser instantâneo
 
 local function speedUpPunchAnimations()
     pcall(function()
         local animator = Humanoid:FindFirstChildWhichIsA("Animator") or Humanoid
         if animator then
             for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                local animName = track.Animation and track.Animation.Name:lower() or ""
-                -- Acelera a animação ao máximo
+                -- Alvo principal: acelerar o soco por completo (ida e volta)
                 track:AdjustSpeed(PUNCH_SPEED_MULTIPLIER)
                 
-                -- Corta a animação após os 50 milissegundos passarem
-                task.delay(ANIMATION_CUT_DELAY, function()
-                    if track.IsPlaying then
-                        track:Stop(0) -- O '0' faz ela parar instantaneamente sem transição suave
-                    end
-                end)
+                -- Remove o atraso de transição quando a animação acabar ou for parada
+                track.Priority = Enum.AnimationPriority.Action4 -- Força prioridade máxima
             end
         end
     end)
 end
+
 
 -- Loop do Auto Punch
 task.spawn(function()
