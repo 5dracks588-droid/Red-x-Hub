@@ -153,41 +153,18 @@ end
 
 task.spawn(function()
     while true do
-        task.wait(0.02) -- Reduzido levemente para responder mais rápido
+        task.wait(0.01)
         if Flags.AutoPunch and not isDead then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
                 if equipped and not isPunchTool(equipped) then
                     equipped.Parent = LP.Backpack
-                    task.wait(0.05)
+                    task.wait(0.01)
                 end
                 local tool = getPunchTool()
                 if tool then
-                    if tool.Parent == LP.Backpack then 
-                        tool.Parent = Character 
-                        task.wait(0.02) 
-                    end
-                    
-                    -- 1. Força a ativação do item para o jogo validar o ganho/soco
+                    if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
                     tool:Activate()
-                    
-                    -- 2. Dispara o Remote em paralelo para garantir o registro do soco
-                    if LP:FindFirstChild("muscleEvent") then
-                        LP.muscleEvent:FireServer("punchClick")
-                    end
-                    
-                    -- 3. Limpa e para instantaneamente qualquer animação visual de soco
-                    local humanoid = Character:FindFirstChildOfClass("Humanoid")
-                    if humanoid then
-                        local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
-                        for _, playingTrack in pairs(animator:GetPlayingAnimationTracks()) do
-                            local animName = playingTrack.Name:lower()
-                            -- Interrompe qualquer animação que lembre socos ou ataques
-                            if animName:find("punch") or animName:find("attack") or animName:find("fist") or animName:find("hit") then
-                                playingTrack:Stop()
-                            end
-                        end
-                    end
                 end
             end)
         end
