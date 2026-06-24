@@ -151,19 +151,6 @@ local function isPunchTool(tool)
     return false
 end
 
-local UserInputService = game:GetService("UserInputService")
-local isManualClick = false
-
--- ── Detecta clique manual do jogador ──
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isManualClick = true
-        task.delay(0.3, function()
-            isManualClick = false
-        end)
-    end
-end)
-
 task.spawn(function()
     while true do
         task.wait(0.05)
@@ -178,25 +165,16 @@ task.spawn(function()
                 if tool then
                     if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
 
-                    -- ── Dá o soco ──
-                    tool:Activate()
-
-                    -- ── Se NÃO foi clique manual, para a animação ──
-                    if not isManualClick then
-                        task.defer(function()
-                            pcall(function()
-                                local animator = Humanoid:FindFirstChildWhichIsA("Animator")
-                                if animator then
-                                    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                                        local name = track.Name:lower()
-                                        if name:find("punch") or name:find("attack") or name:find("swing") or name:find("hit") then
-                                            track:Stop(0)
-                                        end
-                                    end
-                                end
-                            end)
-                        end)
-                    end
+                    -- ── Dá o soco via firetouchinterest igual ao Auto Farm ──
+                    -- ── sem chamar Activate() = sem animação ──
+                    pcall(function()
+                        for _, part in ipairs(tool:GetDescendants()) do
+                            if part:IsA("BasePart") then
+                                firetouchinterest(HRP, part, 0)
+                                firetouchinterest(HRP, part, 1)
+                            end
+                        end
+                    end)
                 end
             end)
         end
