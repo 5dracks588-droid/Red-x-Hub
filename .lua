@@ -151,6 +151,8 @@ local function isPunchTool(tool)
     return false
 end
 
+local isAutoClick = false
+
 task.spawn(function()
     while true do
         task.wait(0.05)
@@ -164,13 +166,15 @@ task.spawn(function()
                 local tool = getPunchTool()
                 if tool then
                     if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
-
-                    -- ── Dá o soco ──
+                    
+                    -- ── Marca que é clique automático ──
+                    isAutoClick = true
                     tool:Activate()
 
-                    -- ── Para animação SÓ se AutoPunch ainda estiver ON ──
-                    task.delay(0.01, function()
-                        if not Flags.AutoPunch then return end
+                    -- ── Para animação SÓ se foi clique automático ──
+                    task.defer(function()
+                        if not isAutoClick then return end
+                        isAutoClick = false
                         pcall(function()
                             local animator = Humanoid:FindFirstChildWhichIsA("Animator")
                             if animator then
@@ -183,6 +187,9 @@ task.spawn(function()
                             end
                         end)
                     end)
+
+                    -- ── Clique manual reseta o flag ──
+                    isAutoClick = false
                 end
             end)
         end
