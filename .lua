@@ -164,18 +164,9 @@ task.spawn(function()
                 local tool = getPunchTool()
                 if tool then
                     if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
-
-                    -- ── Toca a pedra ativa diretamente (igual touchRealRock) ──
-                    -- ── sem Activate() = sem animação ──
-                    if activeRockLabel and rockData[activeRockLabel] then
-                        local data = rockData[activeRockLabel]
-                        for _, part in ipairs(getAllParts(data.realRock)) do
-                            pcall(function()
-                                firetouchinterest(HRP, part, 0)
-                                firetouchinterest(HRP, part, 1)
-                            end)
-                        end
-                    end
+                    -- ── Só mantém a tool equipada, o firetouchinterest
+                    -- ── da pedra já é feito pelo touchRealRock no loop
+                    -- ── de activateRock, sem precisar de Activate() ──
                 end
             end)
         end
