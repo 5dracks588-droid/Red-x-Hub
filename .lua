@@ -85,6 +85,105 @@ local BLACKLIST = {
     "shop","store","character","humanoidrootpart","head","torso","baseplate","terrain","camera","anoleg_rock_clone",
 }
 
+local NoclipEnabled = false
+local FlyEnabled = false
+local FlySpeed = 70
+local bodyVelocity
+local bodyGyro
+local flyConnection
+local moveVector = Vector3.zero
+
+-- Sistema de voo e pulo infinito adaptados
+local UserInputService = game:GetService("UserInputService")
+
+local function StartFly()
+    if FlyEnabled then return end
+    FlyEnabled = true
+    local char = LP.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
+
+    hum.PlatformStand = true
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Velocity = Vector3.zero
+    bodyVelocity.Parent = hrp
+
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bodyGyro.P = 100000
+    bodyGyro.CFrame = Camera.CFrame
+    bodyGyro.Parent = hrp
+
+    flyConnection = RunService.RenderStepped:Connect(function()
+        local camCF = Camera.CFrame
+        local forward = camCF.LookVector
+        local right = camCF.RightVector
+        local direction = Vector3.zero
+
+        direction = direction + forward * moveVector.Z
+        direction = direction + right * (moveVector.X * 0.45)
+
+        if direction.Magnitude > 0 then
+            bodyVelocity.Velocity = direction.Unit * FlySpeed
+        else
+            bodyVelocity.Velocity = Vector3.zero
+        end
+        bodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + Camera.CFrame.LookVector)
+    end)
+end
+
+local function StopFly()
+    FlyEnabled = false
+    local char = LP.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum then hum.PlatformStand = false end
+    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+    if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+end
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.W then moveVector = Vector3.new(moveVector.X, 0, -1)
+    elseif input.KeyCode == Enum.KeyCode.S then moveVector = Vector3.new(moveVector.X, 0, 1)
+    elseif input.KeyCode == Enum.KeyCode.A then moveVector = Vector3.new(-1, 0, moveVector.Z)
+    elseif input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(1, 0, moveVector.Z) end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then moveVector = Vector3.new(moveVector.X, 0, 0)
+    elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(0, 0, moveVector.Z) end
+end)
+
+RunService.RenderStepped:Connect(function()
+    local char = LP.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum and hum.MoveDirection.Magnitude > 0 then
+        local relative = Camera.CFrame:VectorToObjectSpace(hum.MoveDirection)
+        moveVector = Vector3.new(relative.X, 0, -relative.Z)
+    elseif not FlyEnabled then
+        moveVector = Vector3.zero
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfiniteJump then
+        local char = LP.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    if NoclipEnabled and LP.Character then
+        for _, part in pairs(LP.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
+        end
+    end
+end)
+
 local function isBlacklisted(name)
     local low = name:lower()
     for _, w in ipairs(BLACKLIST) do
@@ -604,6 +703,105 @@ task.spawn(function()
                     pcall(function() LP.muscleEvent:FireServer("rep") end)
                 end
             end
+        end
+    end
+end)
+
+local NoclipEnabled = false
+local FlyEnabled = false
+local FlySpeed = 70
+local bodyVelocity
+local bodyGyro
+local flyConnection
+local moveVector = Vector3.zero
+
+-- Sistema de voo e pulo infinito adaptados
+local UserInputService = game:GetService("UserInputService")
+
+local function StartFly()
+    if FlyEnabled then return end
+    FlyEnabled = true
+    local char = LP.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hum or not hrp then return end
+
+    hum.PlatformStand = true
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Velocity = Vector3.zero
+    bodyVelocity.Parent = hrp
+
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bodyGyro.P = 100000
+    bodyGyro.CFrame = Camera.CFrame
+    bodyGyro.Parent = hrp
+
+    flyConnection = RunService.RenderStepped:Connect(function()
+        local camCF = Camera.CFrame
+        local forward = camCF.LookVector
+        local right = camCF.RightVector
+        local direction = Vector3.zero
+
+        direction = direction + forward * moveVector.Z
+        direction = direction + right * (moveVector.X * 0.45)
+
+        if direction.Magnitude > 0 then
+            bodyVelocity.Velocity = direction.Unit * FlySpeed
+        else
+            bodyVelocity.Velocity = Vector3.zero
+        end
+        bodyGyro.CFrame = CFrame.new(hrp.Position, hrp.Position + Camera.CFrame.LookVector)
+    end)
+end
+
+local function StopFly()
+    FlyEnabled = false
+    local char = LP.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum then hum.PlatformStand = false end
+    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+    if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
+end
+
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.W then moveVector = Vector3.new(moveVector.X, 0, -1)
+    elseif input.KeyCode == Enum.KeyCode.S then moveVector = Vector3.new(moveVector.X, 0, 1)
+    elseif input.KeyCode == Enum.KeyCode.A then moveVector = Vector3.new(-1, 0, moveVector.Z)
+    elseif input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(1, 0, moveVector.Z) end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then moveVector = Vector3.new(moveVector.X, 0, 0)
+    elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(0, 0, moveVector.Z) end
+end)
+
+RunService.RenderStepped:Connect(function()
+    local char = LP.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    if hum and hum.MoveDirection.Magnitude > 0 then
+        local relative = Camera.CFrame:VectorToObjectSpace(hum.MoveDirection)
+        moveVector = Vector3.new(relative.X, 0, -relative.Z)
+    elseif not FlyEnabled then
+        moveVector = Vector3.zero
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfiniteJump then
+        local char = LP.Character
+        local hum = char and char:FindFirstChild("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end)
+
+RunService.Stepped:Connect(function()
+    if NoclipEnabled and LP.Character then
+        for _, part in pairs(LP.Character:GetDescendants()) do
+            if part:IsA("BasePart") then part.CanCollide = false end
         end
     end
 end)
