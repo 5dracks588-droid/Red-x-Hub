@@ -595,6 +595,7 @@ local function teleportTo(pos)
     end)
 end
 
+TeleportTab:Button({Title = "Starting Island", Callback = function() teleportTo(Vector3.new(151, 50, 294)) end})
 TeleportTab:Button({Title = "Jungle Island", Callback = function() teleportTo(Vector3.new(-8686, 153, 2392)) end})
 TeleportTab:Button({Title = "Muscle King Island", Callback = function() teleportTo(Vector3.new(-8626, 115, -5731)) end})
 TeleportTab:Button({Title = "Legends Island", Callback = function() teleportTo(Vector3.new(4602, 1009, -3898)) end})
@@ -603,7 +604,6 @@ TeleportTab:Button({Title = "Mystic Island", Callback = function() teleportTo(Ve
 TeleportTab:Button({Title = "Frozen Island", Callback = function() teleportTo(Vector3.new(-2624, 28, -410)) end})
 TeleportTab:Button({Title = "Tiny Island", Callback = function() teleportTo(Vector3.new(-36, 15, 1889)) end})
 TeleportTab:Button({Title = "Secret Island", Callback = function() teleportTo(Vector3.new(1951, 21, 6185)) end})
-
 
 local CombateTab = Window:Tab({
     Title = "Auto Rocks",
