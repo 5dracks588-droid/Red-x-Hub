@@ -151,25 +151,22 @@ local function isPunchTool(tool)
     return false
 end
 
--task.spawn(function()
-    while true do
-        task.wait(0.01)
-        if Flags.AutoPunch and not isDead then
-            pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and not isPunchTool(equipped) then
-                    equipped.Parent = LP.Backpack
-                    task.wait(0.01)
+-- Função para acelerar as animações do soco
+local function speedUpPunchAnimations()
+    pcall(function()
+        local animator = Humanoid:FindFirstChildWhichIsA("Animator") or Humanoid
+        if animator then
+            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                -- Verifica se a animação é de ataque/soco ou se o AutoPunch está ativo
+                if Flags.AutoPunch then
+                    -- Altera a velocidade da animação para o multiplicador definido (VELOCIDADE_RAPIDA = 10)
+                    track:AdjustSpeed(VELOCIDADE_RAPIDA)
+                    track.Priority = Enum.AnimationPriority.Action4 -- Garante prioridade máxima para não travar
                 end
-                local tool = getPunchTool()
-                if tool then
-                    if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
-                    tool:Activate()
-                end
-            end)
+            end
         end
-    end
-end)
+    end)
+end
 
 -- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
