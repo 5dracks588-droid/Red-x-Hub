@@ -79,13 +79,15 @@ local ROCKS = {
     },
 }
 
+
+    
 local BLACKLIST = {
     "crystal","crystals","egg","eggs","pet","pets","aura","spin","wheel","portal","teleport","npc",
     "zone","pad","button","gui","billboard","sign","coin","gem","diamond","orb","ring","vip","donate",
     "shop","store","character","humanoidrootpart","head","torso","baseplate","terrain","camera","anoleg_rock_clone",
 }
 
--- VARIÁVEIS DO FLY IDENTICAS AO MM2
+-- VARIÁVEIS DO FLY IDENTICAS AO MM2 (ADAPTADAS PARA O SEU LP)
 local FlyEnabled = false
 local FlySpeed = 70
 
@@ -95,17 +97,18 @@ local flyConnection
 
 local moveVector = Vector3.zero
 
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+-- Usando o seu 'LP' para não quebrar o script
+local Character = LP.Character or LP.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 
 local function SetupCharacter()
-    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    Character = LP.Character or LP.CharacterAdded:Wait()
     Humanoid = Character:WaitForChild("Humanoid")
     HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
 end
 
-LocalPlayer.CharacterAdded:Connect(SetupCharacter)
+LP.CharacterAdded:Connect(SetupCharacter)
 
 local function StartFly()
     if FlyEnabled then return end
@@ -232,7 +235,7 @@ end
 -- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
     while true do
-        task.wait(0.001) -- Cliques na velocidade máxima permitida pelo motor
+        task.wait(0.001)
         if Flags.AutoPunch and not isDead then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
@@ -247,7 +250,7 @@ task.spawn(function()
                         task.wait(0.01) 
                     end
                     tool:Activate()
-                    speedUpPunchAnimations() -- Força a animação a ir mais rápido após ativar
+                    speedUpPunchAnimations()
                 end
             end)
         end
