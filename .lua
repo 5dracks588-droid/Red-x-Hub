@@ -573,40 +573,37 @@ FarmTab:Toggle({
 })
 
 task.spawn(function()
-    while task.wait(0.1) do
-        local char = LP.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            if farmConfig.autoWeight then
-                local tool = LP.Backpack:FindFirstChild("Weight") or char:FindFirstChild("Weight")
-                if tool then
-                    if tool.Parent ~= char then tool.Parent = char end
-                    pcall(function() LP.muscleEvent:FireServer("rep") end)
-                end
-            end
-            if farmConfig.autoSitups then
-                local tool = LP.Backpack:FindFirstChild("Situps") or char:FindFirstChild("Situps")
-                if tool then
-                    if tool.Parent ~= char then tool.Parent = char end
-                    pcall(function() LP.muscleEvent:FireServer("rep") end)
-                end
-            end
-            if farmConfig.autoPushups then
-                local tool = LP.Backpack:FindFirstChild("Pushups") or char:FindFirstChild("Pushups")
-                if tool then
-                    if tool.Parent ~= char then tool.Parent = char end
-                    pcall(function() LP.muscleEvent:FireServer("rep") end)
-                end
-            end
-            if farmConfig.autoHandstands then
-                local tool = LP.Backpack:FindFirstChild("Handstands") or char:FindFirstChild("Handstands")
-                if tool then
-                    if tool.Parent ~= char then tool.Parent = char end
-                    pcall(function() LP.muscleEvent:FireServer("rep") end)
-                end
-            end
-        end
+    task.wait(1)
+    for _, entry in ipairs(ROCKS) do
+        local data = createCloneForEntry(entry)
+        if data then rockData[entry.label] = data end
+        task.wait(0.2)
     end
 end)
+
+local TeleportTab = Window:Tab({
+    Title = "Teleports",
+    Icon = "map-pin"
+})
+
+local function teleportTo(pos)
+    pcall(function()
+        local char = game:GetService("Players").LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(pos)
+        end
+    end)
+end
+
+TeleportTab:Button({Title = "Jungle Island", Callback = function() teleportTo(Vector3.new(-8686, 153, 2392)) end})
+TeleportTab:Button({Title = "Muscle King Island", Callback = function() teleportTo(Vector3.new(-8626, 115, -5731)) end})
+TeleportTab:Button({Title = "Legends Island", Callback = function() teleportTo(Vector3.new(4602, 1009, -3898)) end})
+TeleportTab:Button({Title = "Flaming Island", Callback = function() teleportTo(Vector3.new(-6760, 28, -1285)) end})
+TeleportTab:Button({Title = "Mystic Island", Callback = function() teleportTo(Vector3.new(2250, 28, 1073)) end})
+TeleportTab:Button({Title = "Frozen Island", Callback = function() teleportTo(Vector3.new(-2624, 28, -410)) end})
+TeleportTab:Button({Title = "Tiny Island", Callback = function() teleportTo(Vector3.new(-36, 15, 1889)) end})
+TeleportTab:Button({Title = "Secret Island", Callback = function() teleportTo(Vector3.new(1951, 21, 6185)) end})
+
 
 local CombateTab = Window:Tab({
     Title = "Auto Rocks",
