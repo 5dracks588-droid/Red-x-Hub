@@ -151,7 +151,18 @@ local function isPunchTool(tool)
     return false
 end
 
-local isAutoClick = false
+local UserInputService = game:GetService("UserInputService")
+local isManualClick = false
+
+-- ── Detecta clique manual do jogador ──
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        isManualClick = true
+        task.delay(0.3, function()
+            isManualClick = false
+        end)
+    end
+end)
 
 task.spawn(function()
     while true do
@@ -166,30 +177,26 @@ task.spawn(function()
                 local tool = getPunchTool()
                 if tool then
                     if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
-                    
-                    -- ── Marca que é clique automático ──
-                    isAutoClick = true
+
+                    -- ── Dá o soco ──
                     tool:Activate()
 
-                    -- ── Para animação SÓ se foi clique automático ──
-                    task.defer(function()
-                        if not isAutoClick then return end
-                        isAutoClick = false
-                        pcall(function()
-                            local animator = Humanoid:FindFirstChildWhichIsA("Animator")
-                            if animator then
-                                for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
-                                    local name = track.Name:lower()
-                                    if name:find("punch") or name:find("attack") or name:find("swing") or name:find("hit") then
-                                        track:Stop(0)
+                    -- ── Se NÃO foi clique manual, para a animação ──
+                    if not isManualClick then
+                        task.defer(function()
+                            pcall(function()
+                                local animator = Humanoid:FindFirstChildWhichIsA("Animator")
+                                if animator then
+                                    for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                                        local name = track.Name:lower()
+                                        if name:find("punch") or name:find("attack") or name:find("swing") or name:find("hit") then
+                                            track:Stop(0)
+                                        end
                                     end
                                 end
-                            end
+                            end)
                         end)
-                    end)
-
-                    -- ── Clique manual reseta o flag ──
-                    isAutoClick = false
+                    end
                 end
             end)
         end
