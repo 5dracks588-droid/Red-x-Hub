@@ -546,6 +546,32 @@ ToggleH = FarmTab:Toggle({
     end,
 })
 
+local lockPos = nil
+
+FarmTab:Toggle({
+    Title = "Lock Position",
+    Value = false,
+    Callback = function(Value)
+        if Value then
+            -- ── Salva a posição atual quando ativa ──
+            lockPos = HRP.CFrame
+            task.spawn(function()
+                while Value do
+                    task.wait(0.1)
+                    pcall(function()
+                        local char = LP.Character
+                        if char and char:FindFirstChild("HumanoidRootPart") then
+                            char.HumanoidRootPart.CFrame = lockPos
+                        end
+                    end)
+                end
+            end)
+        else
+            lockPos = nil
+        end
+    end,
+})
+
 task.spawn(function()
     while task.wait(0.1) do
         local char = LP.Character
