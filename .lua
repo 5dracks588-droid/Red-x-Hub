@@ -163,10 +163,12 @@ task.spawn(function()
                 end
                 local tool = getPunchTool()
                 if tool then
-                    if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
-                    -- ── Só mantém a tool equipada, o firetouchinterest
-                    -- ── da pedra já é feito pelo touchRealRock no loop
-                    -- ── de activateRock, sem precisar de Activate() ──
+                    if tool.Parent == LP.Backpack then 
+                        tool.Parent = Character 
+                        task.wait(0.02) 
+                    end
+                    -- Dispara o evento direto no servidor para tirar a animação de clique
+                    LP.muscleEvent:FireServer("punchClick")
                 end
             end)
         end
