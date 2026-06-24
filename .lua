@@ -151,9 +151,32 @@ local function isPunchTool(tool)
     return false
 end
 
+-- Variable para controlar a velocidade da animação do soco (Ajuste aqui)
+local PUNCH_SPEED_MULTIPLIER = 2.5 
+
+-- Função para acelerar as animações de soco ativas
+local function speedUpPunchAnimations()
+    pcall(function()
+        local animator = Humanoid:FindFirstChildWhichIsA("Animator") or Humanoid
+        if animator then
+            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+                local animName = track.Animation and track.Animation.Name:lower() or ""
+                -- Detecta se a animação é de soco, ataque ou braço
+                if animName:find("punch") or animName:find("fist") or animName:find("attack") or animName:find("hit") then
+                    track:AdjustSpeed(PUNCH_SPEED_MULTIPLIER)
+                else
+                    -- Fallback caso o jogo use IDs/Nomes genéricos: acelera se o nome tiver "anim" ou "tool"
+                    track:AdjustSpeed(PUNCH_SPEED_MULTIPLIER)
+                end
+            end
+        end
+    end)
+end
+
+-- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
     while true do
-        task.wait(0.01)
+        task.wait(0.001) -- Cliques na velocidade máxima permitida pelo motor
         if Flags.AutoPunch and not isDead then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
@@ -163,8 +186,12 @@ task.spawn(function()
                 end
                 local tool = getPunchTool()
                 if tool then
-                    if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
+                    if tool.Parent == LP.Backpack then 
+                        tool.Parent = Character 
+                        task.wait(0.01) 
+                    end
                     tool:Activate()
+                    speedUpPunchAnimations() -- Força a animação a ir mais rápido após ativar
                 end
             end)
         end
