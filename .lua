@@ -151,27 +151,54 @@ local function isPunchTool(tool)
     return false
 end
 
--- Variable para controlar a velocidade da animação do soco (Ajuste aqui)
-local PUNCH_SPEED_MULTIPLIER = 10 
+-- Configurações de velocidade e corte
+local PUNCH_SPEED_MULTIPLIER = 4.0 -- Velocidade da animação modificada
+local ANIMATION_CUT_DELAY = 0.05   -- Tempo em segundos (0.05 = 50 milissegundos) para cortar a animação
 
--- Função para acelerar as animações de soco ativas
 local function speedUpPunchAnimations()
     pcall(function()
         local animator = Humanoid:FindFirstChildWhichIsA("Animator") or Humanoid
         if animator then
             for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
                 local animName = track.Animation and track.Animation.Name:lower() or ""
-                -- Detecta se a animação é de soco, ataque ou braço
-                if animName:find("punch") or animName:find("fist") or animName:find("attack") or animName:find("hit") then
-                    track:AdjustSpeed(PUNCH_SPEED_MULTIPLIER)
-                else
-                    -- Fallback caso o jogo use IDs/Nomes genéricos: acelera se o nome tiver "anim" ou "tool"
-                    track:AdjustSpeed(PUNCH_SPEED_MULTIPLIER)
-                end
+                -- Acelera a animação ao máximo
+                track:AdjustSpeed(PUNCH_SPEED_MULTIPLIER)
+                
+                -- Corta a animação após os 50 milissegundos passarem
+                task.delay(ANIMATION_CUT_DELAY, function()
+                    if track.IsPlaying then
+                        track:Stop(0) -- O '0' faz ela parar instantaneamente sem transição suave
+                    end
+                end)
             end
         end
     end)
 end
+
+-- Loop do Auto Punch
+task.spawn(function()
+    while true do
+        task.wait(0.001)
+        if Flags.AutoPunch and not isDead then
+            pcall(function()
+                local equipped = Character:FindFirstChildWhichIsA("Tool")
+                if equipped and not isPunchTool(equipped) then
+                    equipped.Parent = LP.Backpack
+                    task.wait(0.01)
+                end
+                local tool = getPunchTool()
+                if tool then
+                    if tool.Parent == LP.Backpack then 
+                        tool.Parent = Character 
+                        task.wait(0.01) 
+                    end
+                    tool:Activate()
+                    speedUpPunchAnimations() -- Ativa o acelerador e o corte da animação
+                end
+            end)
+        end
+    end
+end)
 
 -- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
