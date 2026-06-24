@@ -167,13 +167,27 @@ task.spawn(function()
                         tool.Parent = Character 
                         task.wait(0.02) 
                     end
-                    -- Dispara o evento direto no servidor para tirar a animação de clique
-                    LP.muscleEvent:FireServer("punchClick")
+                    
+                    -- Ativa a ferramenta normalmente para garantir que o soco funcione
+                    tool:Activate()
+                    
+                    -- Interrompe instantaneamente qualquer animação de soco iniciada
+                    local humanoid = Character:FindFirstChildOfClass("Humanoid")
+                    if humanoid then
+                        local animator = humanoid:FindFirstChildOfClass("Animator") or humanoid
+                        for _, playingTrack in pairs(animator:GetPlayingAnimationTracks()) do
+                            -- Corta animações que tenham nomes relacionados a ataque/soco
+                            if playingTrack.Name:lower():find("punch") or playingTrack.Name:lower():find("attack") then
+                                playingTrack:Stop()
+                            end
+                        end
+                    end
                 end
             end)
         end
     end
 end)
+
 
 Humanoid.Died:Connect(function()
     isDead = true
