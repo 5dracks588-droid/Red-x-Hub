@@ -164,12 +164,13 @@ task.spawn(function()
                 local tool = getPunchTool()
                 if tool then
                     if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.02) end
-                    
+
                     -- ── Dá o soco ──
                     tool:Activate()
 
-                    -- ── Para só a animação de soco, não o idle ──
-                    task.defer(function()
+                    -- ── Para animação SÓ se AutoPunch ainda estiver ON ──
+                    task.delay(0.01, function()
+                        if not Flags.AutoPunch then return end
                         pcall(function()
                             local animator = Humanoid:FindFirstChildWhichIsA("Animator")
                             if animator then
