@@ -2,6 +2,7 @@ local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footag
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local LP = Players.LocalPlayer
 local Character = LP.Character or LP.CharacterAdded:Wait()
@@ -17,6 +18,20 @@ local punchContactOffset = 0
 local rockData = {}
 local rockToggles = {}
 local isDead = false
+
+-- ── VARIÁVEIS ADICIONADAS DA ABA PLAYER ──
+local Speed = 16
+local Jump = 50
+local InfiniteJump = false
+local NoclipEnabled = false
+local FlyEnabled = false
+local FlySpeed = 70
+
+local bodyVelocity
+local bodyGyro
+local flyConnection
+local moveVector = Vector3.zero
+-- ────────────────────────────────────────
 
 local ROCKS = {
     {
@@ -154,7 +169,7 @@ end
 -- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
     while true do
-        task.wait(0.001) -- Cliques na velocidade máxima permitida pelo motor
+        task.wait(0.001)
         if Flags.AutoPunch and not isDead then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
@@ -169,28 +184,127 @@ task.spawn(function()
                         task.wait(0.01) 
                     end
                     tool:Activate()
-                    speedUpPunchAnimations() -- Força a animação a ir mais rápido após ativar
                 end
             end)
         end
     end
 end)
 
+-- ── FUNÇÕES DE VOO (FLY) ──
+local function StartFly()
+    if FlyEnabled then return end
+    FlyEnabled = true
+
+    Humanoid.PlatformStand = true
+
+    bodyVelocity = Instance.new("BodyVelocity")
+    bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bodyVelocity.Velocity = Vector3.zero
+    bodyVelocity.Parent = HRP
+
+    bodyGyro = Instance.new("BodyGyro")
+    bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bodyGyro.P = 100000
+    bodyGyro.CFrame = Camera.CFrame
+    bodyGyro.Parent = HRP
+
+    flyConnection = RunService.RenderStepped:Connect(function()
+        local camCF = Camera.CFrame
+        local forward = camCF.LookVector
+        local right = camCF.RightVector
+
+        local direction = Vector3.zero
+        direction += forward * moveVector.Z
+        direction += right * (moveVector.X * 0.45)
+
+        if direction.Magnitude > 0 then
+            bodyVelocity.Velocity = direction.Unit * FlySpeed
+        else
+            bodyVelocity.Velocity = Vector3.zero
+        end
+
+        bodyGyro.CFrame = CFrame.new(
+            HRP.Position,
+            HRP.Position + Camera.CFrame.LookVector
+        )
+    end)
+end
+
+local function StopFly()
+    FlyEnabled = false
+    if Humanoid then Humanoid.PlatformStand = false end
+
+    if flyConnection then flyConnection:Disconnect(); flyConnection = nil end
+    if bodyVelocity then bodyVelocity:Destroy(); bodyVelocity = nil end
+    if bodyGyro then bodyGyro:Destroy(); bodyGyro = nil end
+end
+
+-- ── ENTRADAS DE MOUSE/TECLADO E MOBILE DO PLAYER ──
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if input.KeyCode == Enum.KeyCode.W then moveVector = Vector3.new(moveVector.X, 0, -1)
+    elseif input.KeyCode == Enum.KeyCode.S then moveVector = Vector3.new(moveVector.X, 0, 1)
+    elseif input.KeyCode == Enum.KeyCode.A then moveVector = Vector3.new(-1, 0, moveVector.Z)
+    elseif input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(1, 0, moveVector.Z) end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.KeyCode == Enum.KeyCode.W or input.KeyCode == Enum.KeyCode.S then moveVector = Vector3.new(moveVector.X, 0, 0)
+    elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(0, 0, moveVector.Z) end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfiniteJump and Character and Humanoid then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+end)
+
+-- Loop RenderStepped para Atualizações Físicas Gerais (Speed, Jump, NoClip, Mobile)
+RunService.RenderStepped:Connect(function()
+    if Character and Humanoid and HRP then
+        -- NoClip
+        if NoclipEnabled then
+            for _, part in pairs(Character:GetDescendants()) do
+                if part:IsA("BasePart") then part.CanCollide = false end
+            end
+        end
+        -- Speed e Jump
+        Humanoid.WalkSpeed = Speed
+        Humanoid.JumpPower = Jump
+        
+        -- Mobile Support
+        local moveDir = Humanoid.MoveDirection
+        if moveDir.Magnitude > 0 then
+            local relative = Camera.CFrame:VectorToObjectSpace(moveDir)
+            moveVector = Vector3.new(relative.X, 0, -relative.Z)
+        else
+            if not (UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.D)) then
+                moveVector = Vector3.zero
+            end
+        end
+    end
+end)
+
+-- ──────────────────────────────────────────────────
+
 Humanoid.Died:Connect(function()
     isDead = true
+    StopFly()
     pcall(function()
         local tool = Character:FindFirstChildWhichIsA("Tool")
         if tool then tool.Parent = LP.Backpack end
     end)
 end)
 
-LP.CharacterAdded:Connect(function(char)
+local function SetupCharacter(char)
     Character = char
     Humanoid = char:WaitForChild("Humanoid")
     HRP = char:WaitForChild("HumanoidRootPart")
     isDead = false
+    
     Humanoid.Died:Connect(function()
         isDead = true
+        StopFly()
         pcall(function()
             local tool = Character:FindFirstChildWhichIsA("Tool")
             if tool then tool.Parent = LP.Backpack end
@@ -204,7 +318,9 @@ LP.CharacterAdded:Connect(function(char)
     else
         isDead = false
     end
-end)
+end
+
+LP.CharacterAdded:Connect(SetupCharacter)
 
 local function findRockByCoord(entry)
     local best, bestDist = nil, math.huge
@@ -397,92 +513,34 @@ local MainTab = Window:Tab({
 })
 
 local LISTA_1M = {
-    "480 RB – 5 em 5",
-    "1.480 RB – 10 em 10",
-    "2.980 RB – 15 em 15",
-    "4.980 RB – 20 em 20",
-    "7.480 RB – 25 em 25",
-    "10.480 RB – 30 em 30",
-    "13.980 RB – 35 em 35",
-    "17.980 RB – 40 em 40",
-    "22.480 RB – 45 em 45",
-    "27.480 RB – 50 em 50",
-    "32.980 RB – 55 em 55",
-    "38.980 RB – 60 em 60",
-    "45.480 RB – 65 em 65",
-    "52.480 RB – 70 em 70",
-    "59.980 RB – 75 em 75",
-    "67.980 RB – 80 em 80",
-    "76.480 RB – 85 em 85",
-    "85.480 RB – 90 em 90",
-    "94.980 RB – 95 em 95",
+    "480 RB – 5 em 5", "1.480 RB – 10 em 10", "2.980 RB – 15 em 15", "4.980 RB – 20 em 20",
+    "7.480 RB – 25 em 25", "10.480 RB – 30 em 30", "13.980 RB – 35 em 35", "17.980 RB – 40 em 40",
+    "22.480 RB – 45 em 45", "27.480 RB – 50 em 50", "32.980 RB – 55 em 55", "38.980 RB – 60 em 60",
+    "45.480 RB – 65 em 65", "52.480 RB – 70 em 70", "59.980 RB – 75 em 75", "67.980 RB – 80 em 80",
+    "76.480 RB – 85 em 85", "85.480 RB – 90 em 90", "94.980 RB – 95 em 95",
 }
 
 local LISTA_5M = {
-    "80 RB – 5 em 5",
-    "220 RB – 8 em 8",
-    "280 RB – 10 em 10",
-    "580 RB – 15 em 15",
-    "980 RB – 20 em 20",
-    "1.480 RB – 25 em 25",
-    "2.080 RB – 30 em 30",
-    "2.780 RB – 35 em 35",
-    "3.580 RB – 40 em 40",
-    "4.480 RB – 45 em 45",
-    "5.480 RB – 50 em 50",
-    "6.580 RB – 55 em 55",
-    "7.780 RB – 60 em 60",
-    "9.080 RB – 65 em 65",
-    "10.480 RB – 70 em 70",
-    "11.980 RB – 75 em 75",
-    "13.580 RB – 80 em 80",
-    "15.280 RB – 85 em 85",
-    "17.080 RB – 90 em 90",
-    "18.980 RB – 95 em 95",
+    "80 RB – 5 em 5", "220 RB – 8 em 8", "280 RB – 10 em 10", "580 RB – 15 em 15",
+    "980 RB – 20 em 20", "1.480 RB – 25 em 25", "2.080 RB – 30 em 30", "2.780 RB – 35 em 35",
+    "3.580 RB – 40 em 40", "4.480 RB – 45 em 45", "5.480 RB – 50 em 50", "6.580 RB – 55 em 55",
+    "7.780 RB – 60 em 60", "9.080 RB – 65 em 65", "10.480 RB – 70 em 70", "11.980 RB – 75 em 75",
+    "13.580 RB – 80 em 80", "15.280 RB – 85 em 85", "17.080 RB – 90 em 90", "18.980 RB – 95 em 95",
 }
 
 local LISTA_10M = {
-    "52 RB – 5 em 5 (Pet 80 XP)",
-    "208 RB – 10 em 10 (Pet 45 XP)",
-    "440 RB – 15 em 15 (Pet 5 XP)",
-    "748 RB – 20 em 20 (Pet 20 XP)",
-    "1.132 RB – 25 em 25 (Pet 30 XP)",
-    "1.592 RB – 30 em 30 (Pet 55 XP)",
-    "2.132 RB – 35 em 35 (Pet 30 XP)",
-    "2.748 RB – 40 em 40 (Pet 20 XP)",
-    "3.440 RB – 45 em 45 (Pet 25 XP)",
-    "4.208 RB – 50 em 50 (Pet 45 XP)",
-    "5.056 RB – 55 em 55 (Pet 15 XP)",
-    "5.980 RB – 60 em 60 (Pet 0 XP)",
-    "6.980 RB – 65 em 65 (Pet 0 XP)",
-    "8.056 RB – 70 em 70 (Pet 15 XP)",
-    "9.208 RB – 75 em 75 (Pet 45 XP)",
-    "10.440 RB – 80 em 80 (Pet 25 XP)",
-    "11.748 RB – 85 em 85 (Pet 25 XP)",
-    "13.132 RB – 90 em 90 (Pet 30 XP)",
+    "52 RB – 5 em 5 (Pet 80 XP)", "208 RB – 10 em 10 (Pet 45 XP)", "440 RB – 15 em 15 (Pet 5 XP)",
+    "748 RB – 20 em 20 (Pet 20 XP)", "1.132 RB – 25 em 25 (Pet 30 XP)", "1.592 RB – 30 em 30 (Pet 55 XP)",
+    "2.132 RB – 35 em 35 (Pet 30 XP)", "2.748 RB – 40 em 40 (Pet 20 XP)", "3.440 RB – 45 em 45 (Pet 25 XP)",
+    "4.208 RB – 50 em 50 (Pet 45 XP)", "5.056 RB – 55 em 55 (Pet 15 XP)", "5.980 RB – 60 em 60 (Pet 0 XP)",
+    "6.980 RB – 65 em 65 (Pet 0 XP)", "8.056 RB – 70 em 70 (Pet 15 XP)", "9.208 RB – 75 em 75 (Pet 45 XP)",
+    "10.440 RB – 80 em 80 (Pet 25 XP)", "11.748 RB – 85 em 85 (Pet 25 XP)", "13.132 RB – 90 em 90 (Pet 30 XP)",
     "14.592 RB – 95 em 95 (Pet 55 XP)",
 }
 
-MainTab:Dropdown({
-    Title = "Lista de Rebirth 10M",
-    Values = LISTA_10M,
-    Value = LISTA_10M[1],
-    Callback = function(v) end,
-})
-
-MainTab:Dropdown({
-    Title = "Lista de Rebirth 5M",
-    Values = LISTA_5M,
-    Value = LISTA_5M[1],
-    Callback = function(v) end,
-})
-
-MainTab:Dropdown({
-    Title = "Lista de Rebirth 1M",
-    Values = LISTA_1M,
-    Value = LISTA_1M[1],
-    Callback = function(v) end,
-})
+MainTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = LISTA_10M[1], Callback = function(v) end })
+MainTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
+MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
 
 local FarmTab = Window:Tab({
     Title = "Auto Farm",
@@ -500,9 +558,7 @@ ToggleW = FarmTab:Toggle({
             farmConfig.autoSitups = false;     ToggleS:Set(false)
             farmConfig.autoPushups = false;    ToggleP:Set(false)
             farmConfig.autoHandstands = false; ToggleH:Set(false)
-        else
-            unequipTool("Weight")
-        end
+        else unequipTool("Weight") end
     end,
 })
 
@@ -515,9 +571,7 @@ ToggleS = FarmTab:Toggle({
             farmConfig.autoWeight = false;     ToggleW:Set(false)
             farmConfig.autoPushups = false;    ToggleP:Set(false)
             farmConfig.autoHandstands = false; ToggleH:Set(false)
-        else
-            unequipTool("Situps")
-        end
+        else unequipTool("Situps") end
     end,
 })
 
@@ -530,9 +584,7 @@ ToggleP = FarmTab:Toggle({
             farmConfig.autoWeight = false;     ToggleW:Set(false)
             farmConfig.autoSitups = false;     ToggleS:Set(false)
             farmConfig.autoHandstands = false; ToggleH:Set(false)
-        else
-            unequipTool("Pushups")
-        end
+        else unequipTool("Pushups") end
     end,
 })
 
@@ -545,14 +597,11 @@ ToggleH = FarmTab:Toggle({
             farmConfig.autoWeight = false;  ToggleW:Set(false)
             farmConfig.autoSitups = false;  ToggleS:Set(false)
             farmConfig.autoPushups = false; ToggleP:Set(false)
-        else
-            unequipTool("Handstands")
-        end
+        else unequipTool("Handstands") end
     end,
 })
 
 local lockPos = nil
-
 FarmTab:Toggle({
     Title = "Lock Position",
     Value = false,
@@ -563,49 +612,42 @@ FarmTab:Toggle({
                 while Value do
                     task.wait(0.1)
                     pcall(function()
-                        local char = LP.Character
-                        if char and char:FindFirstChild("HumanoidRootPart") then
-                            char.HumanoidRootPart.CFrame = lockPos
-                        end
+                        if Character and HRP then HRP.CFrame = lockPos end
                     end)
                 end
             end)
-        else
-            lockPos = nil
-        end
+        else lockPos = nil end
     end,
 })
 
--- ── loop do auto farm (o que tinha sumido e fazia o farm não funcionar) ──
 task.spawn(function()
     while task.wait(0.1) do
-        local char = LP.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
+        if Character and HRP then
             if farmConfig.autoWeight then
-                local tool = LP.Backpack:FindFirstChild("Weight") or char:FindFirstChild("Weight")
+                local tool = LP.Backpack:FindFirstChild("Weight") or Character:FindFirstChild("Weight")
                 if tool then
-                    if tool.Parent ~= char then tool.Parent = char end
+                    if tool.Parent ~= Character then tool.Parent = Character end
                     pcall(function() LP.muscleEvent:FireServer("rep") end)
                 end
             end
             if farmConfig.autoSitups then
-                local tool = LP.Backpack:FindFirstChild("Situps") or char:FindFirstChild("Situps")
+                local tool = LP.Backpack:FindFirstChild("Situps") or Character:FindFirstChild("Situps")
                 if tool then
-                    if tool.Parent ~= char then tool.Parent = char end
+                    if tool.Parent ~= Character then tool.Parent = Character end
                     pcall(function() LP.muscleEvent:FireServer("rep") end)
                 end
             end
             if farmConfig.autoPushups then
-                local tool = LP.Backpack:FindFirstChild("Pushups") or char:FindFirstChild("Pushups")
+                local tool = LP.Backpack:FindFirstChild("Pushups") or Character:FindFirstChild("Pushups")
                 if tool then
-                    if tool.Parent ~= char then tool.Parent = char end
+                    if tool.Parent ~= Character then tool.Parent = Character end
                     pcall(function() LP.muscleEvent:FireServer("rep") end)
                end
             end
             if farmConfig.autoHandstands then
-                local tool = LP.Backpack:FindFirstChild("Handstands") or char:FindFirstChild("Handstands")
+                local tool = LP.Backpack:FindFirstChild("Handstands") or Character:FindFirstChild("Handstands")
                 if tool then
-                    if tool.Parent ~= char then tool.Parent = char end
+                    if tool.Parent ~= Character then tool.Parent = Character end
                     pcall(function() LP.muscleEvent:FireServer("rep") end)
                 end
             end
@@ -613,7 +655,63 @@ task.spawn(function()
     end
 end)
 
--- ── aba de teleportes ──
+-- ── ABA PLAYER/JOGADOR INTEGRADA COM TODAS AS FUNÇÕES ──
+local PlayerTab = Window:Tab({
+    Title = "Player",
+    Icon = "user"
+})
+
+PlayerTab:Input({
+    Title = "Velocidade",
+    Placeholder = "16",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num then Speed = num end  
+    end
+})
+
+PlayerTab:Input({
+    Title = "Pulo",
+    Placeholder = "50",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num then Jump = num end  
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Pulo Infinito",
+    Value = false,
+    Callback = function(v)
+        InfiniteJump = v
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "NoClip",
+    Value = false,
+    Callback = function(v)
+        NoclipEnabled = v
+    end
+})
+
+PlayerTab:Toggle({
+    Title = "Fly",
+    Value = false,
+    Callback = function(v)
+        if v then StartFly() else StopFly() end
+    end
+})
+
+PlayerTab:Slider({
+    Title = "Fly Speed",
+    Step = 5,
+    Value = { Min = 10, Max = 200, Default = 70 },
+    Callback = function(v)
+        FlySpeed = v
+    end
+})
+
 local TeleportTab = Window:Tab({
     Title = "Teleports",
     Icon = "map-pin"
@@ -621,10 +719,7 @@ local TeleportTab = Window:Tab({
 
 local function teleportTo(pos)
     pcall(function()
-        local char = game:GetService("Players").LocalPlayer.Character
-        if char and char:FindFirstChild("HumanoidRootPart") then
-            char.HumanoidRootPart.CFrame = CFrame.new(pos)
-        end
+        if Character and HRP then HRP.CFrame = CFrame.new(pos) end
     end)
 end
 
@@ -638,7 +733,6 @@ TeleportTab:Button({Title = "Frozen Island", Callback = function() teleportTo(Ve
 TeleportTab:Button({Title = "Tiny Island", Callback = function() teleportTo(Vector3.new(-36, 15, 1889)) end})
 TeleportTab:Button({Title = "Secret Island", Callback = function() teleportTo(Vector3.new(1951, 21, 6185)) end})
 
--- ── aba auto rocks ──
 local CombateTab = Window:Tab({
     Title = "Auto Rocks",
     Icon = "mountain"
@@ -678,15 +772,14 @@ for _, entry in ipairs(ROCKS) do
                     if prevToggle then pcall(function() prevToggle:Set(false) end) end
                 end
                 activateRock(lbl)
-            else
-                deactivateRock(lbl)
-            end
+            else deactivateRock(lbl) end
         end,
     })
     rockToggles[lbl] = toggle
 end
 
--- ── inicializador das pedras (apenas uma vez no final) ──
+-- ──────────────────────────────────────────────────────
+
 task.spawn(function()
     task.wait(1)
     for _, entry in ipairs(ROCKS) do
@@ -695,4 +788,3 @@ task.spawn(function()
         task.wait(0.2)
     end
 end)
-
