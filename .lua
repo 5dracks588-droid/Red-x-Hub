@@ -20,12 +20,12 @@ local rockToggles = {}
 local isDead = false
 
 -- ── VARIÁVEIS ADICIONADAS DA ABA PLAYER ──
-local Speed = 16
+local Speed = 250
 local Jump = 50
 local InfiniteJump = false
 local NoclipEnabled = false
 local FlyEnabled = false
-local FlySpeed = 70
+local FlySpeed = 150
 
 local bodyVelocity
 local bodyGyro
@@ -657,13 +657,13 @@ end)
 
 -- ── ABA PLAYER/JOGADOR INTEGRADA COM TODAS AS FUNÇÕES ──
 local PlayerTab = Window:Tab({
-    Title = "Player",
+    Title = "Jogador",
     Icon = "user"
 })
 
 PlayerTab:Input({
     Title = "Velocidade",
-    Placeholder = "16",
+    Placeholder = "250",
     Callback = function(text)
         local num = tonumber(text)
         if num then Speed = num end  
@@ -706,7 +706,7 @@ PlayerTab:Toggle({
 PlayerTab:Slider({
     Title = "Fly Speed",
     Step = 5,
-    Value = { Min = 10, Max = 200, Default = 70 },
+    Value = { Min = 10, Max = 500, Default = 150 },
     Callback = function(v)
         FlySpeed = v
     end
