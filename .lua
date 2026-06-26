@@ -485,7 +485,7 @@ local farmConfig = {
 
 local Window = WindUI:CreateWindow({
     Title = "Red x Hub",
-    Icon = "99356590333123",
+    Icon = "spark",
     Author = "RED",
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580, 460),
