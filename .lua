@@ -485,8 +485,8 @@ local farmConfig = {
 
 local Window = WindUI:CreateWindow({
     Title = "Red x Hub",
-    Icon = "spark",
-    Author = "RED",
+    Icon = "zap",
+    Author = "zx",
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -500,7 +500,7 @@ Window:EditOpenButton({
     StrokeThickness = 2,
     Color = ColorSequence.new(
         Color3.fromRGB(255, 0, 0),
-        Color3.fromRGB(255, 0, 0)
+        Color3.fromRGB(255, 255, 255)
     ),
     OnlyMobile = false,
     Enabled = true,
@@ -781,10 +781,10 @@ end
 -- ──────────────────────────────────────────────────────
 
 task.spawn(function()
-    task.wait(1)
+    task.wait(0)
     for _, entry in ipairs(ROCKS) do
         local data = createCloneForEntry(entry)
         if data then rockData[entry.label] = data end
-        task.wait(0.2)
+        task.wait(0)
     end
 end)
