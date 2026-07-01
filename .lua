@@ -73,7 +73,6 @@ local ROCKS = {
         durability = "150.000", minSize = 3,
     },
     {
-        -- CORRIGIDO: Voltando a configuração padrão que estava antes
         label = "Golden Rock 5K", useCoord = true,
         targetPos = Vector3.new(307, 15, -582),
         names = {"Golden Rock","GoldenRock","Gold Rock","GoldRock","Golden"},
@@ -171,7 +170,7 @@ local function isPunchTool(tool)
     return false
 end
 
--- ── SISTEMA DE ANIMAÇÃO EM LOOP CONTÍNUO ──
+-- ── SISTEMA DE ANIMAÇÃO EM LOOP CONTÍNUO CORRIGIDO ──
 local function gerenciarAnimacaoInfinita(char)
 	local hum = char:WaitForChild("Humanoid", 5)
 	if not hum then return end
@@ -190,7 +189,6 @@ local function gerenciarAnimacaoInfinita(char)
                     animationTrack:Stop()
                 end
             else
-                -- MUDANÇA AQUI: Se o auto soco estiver DESATIVADO, força a animação a voltar para o padrão (velocidade 1)
                 animationTrack.Looped = false
                 animationTrack:AdjustSpeed(1)
             end
@@ -349,15 +347,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-Humanoid.Died:Connect(function()
-    isDead = true
-    StopFly()
-    pcall(function()
-        local tool = Character:FindFirstChildWhichIsA("Tool")
-        if tool then tool.Parent = LP.Backpack end
-    end)
-end)
-
+-- ── CORREÇÃO DE RESET (RESPAWN) ──
 local function SetupCharacter(char)
     Character = char
     Humanoid = char:WaitForChild("Humanoid")
@@ -373,14 +363,20 @@ local function SetupCharacter(char)
         end)
     end)
 
-    if Flags.AutoPunch then
-        task.wait(0.3)
-        isDead = false
-        task.spawn(iniciarMonitoramentoBrabo, char)
-    else
-        isDead = false
-    end
+    -- Força a reinicialização completa dos loops de soco ao reviver
+    task.wait(0.3)
+    isDead = false
+    task.spawn(iniciarMonitoramentoBrabo, char)
 end
+
+Humanoid.Died:Connect(function()
+    isDead = true
+    StopFly()
+    pcall(function()
+        local tool = Character:FindFirstChildWhichIsA("Tool")
+        if tool then tool.Parent = LP.Backpack end
+    end)
+end)
 
 LP.CharacterAdded:Connect(SetupCharacter)
 if Character then task.spawn(iniciarMonitoramentoBrabo, Character) end
@@ -784,7 +780,6 @@ CombateTab:Toggle({
                 local equipped = Character:FindFirstChild(TOOL_NAME)
                 if equipped then equipped.Parent = LP.Backpack end
                 
-                -- MUDANÇA AQUI: Reseta todas as animações ativas de soco para velocidade padrão instantaneamente ao desativar
                 local hum = Character:FindFirstChild("Humanoid")
                 if hum then
                     for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
