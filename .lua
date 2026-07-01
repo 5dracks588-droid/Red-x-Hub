@@ -19,6 +19,11 @@ local rockData = {}
 local rockToggles = {}
 local isDead = false
 
+-- ── CONFIGURAÇÕES DO AUTO SOCO ADAPTADO ──
+local TOOL_NAME = "Punch" 
+local MULTIPLICADOR_VELOCIDADE = 10 
+local INTERVALO_DO_CLICK = 0.1 
+
 -- ── VARIÁVEIS ADICIONADAS DA ABA PLAYER ──
 local Speed = 250
 local Jump = 50
@@ -31,7 +36,6 @@ local bodyVelocity
 local bodyGyro
 local flyConnection
 local moveVector = Vector3.zero
--- ────────────────────────────────────────
 
 local ROCKS = {
     {
@@ -69,6 +73,7 @@ local ROCKS = {
         durability = "150.000", minSize = 3,
     },
     {
+        -- CORRIGIDO: Voltando a configuração padrão que estava antes
         label = "Golden Rock 5K", useCoord = true,
         targetPos = Vector3.new(307, 15, -582),
         names = {"Golden Rock","GoldenRock","Gold Rock","GoldRock","Golden"},
@@ -149,7 +154,7 @@ local function isValidObj(obj)
 end
 
 function getPunchTool()
-    for _, name in ipairs({"Punch","PunchTool","Fist","Glove","Boxing Gloves","Punching Gloves"}) do
+    for _, name in ipairs({TOOL_NAME,"Punch","PunchTool","Fist","Glove","Boxing Gloves","Punching Gloves"}) do
         local t = LP.Backpack:FindFirstChild(name) or Character:FindFirstChild(name)
         if t then return t end
     end
@@ -166,28 +171,91 @@ local function isPunchTool(tool)
     return false
 end
 
--- Loop do Auto Punch Otimizado e Acelerado
+-- ── SISTEMA DE ANIMAÇÃO EM LOOP CONTÍNUO ──
+local function gerenciarAnimacaoInfinita(char)
+	local hum = char:WaitForChild("Humanoid", 5)
+	if not hum then return end
+
+	hum.AnimationPlayed:Connect(function(animationTrack)
+		local animName = string.lower(animationTrack.Animation.Name)
+		local animId = animationTrack.Animation.AnimationId
+
+		if string.find(animName, "punch") or string.find(animName, "attack") or string.find(animId, "tool") then
+            if Flags.AutoPunch then
+                animationTrack.Looped = true 
+                animationTrack:AdjustSpeed(MULTIPLICADOR_VELOCIDADE)
+                
+                local socoNaMao = char:FindFirstChild(TOOL_NAME)
+                if not socoNaMao then
+                    animationTrack:Stop()
+                end
+            else
+                -- MUDANÇA AQUI: Se o auto soco estiver DESATIVADO, força a animação a voltar para o padrão (velocidade 1)
+                animationTrack.Looped = false
+                animationTrack:AdjustSpeed(1)
+            end
+		end
+	end)
+end
+
+-- ── SISTEMA ULTRA RÁPIDO DE INVENTÁRIO INTEGRADO ──
+local function iniciarMonitoramentoBrabo(char)
+	local backpack = LP:WaitForChild("Backpack", 5)
+	if not backpack then return end
+
+	task.spawn(gerenciarAnimacaoInfinita, char)
+
+	local function verificarMao()
+		if not Flags.AutoPunch or isDead then return end
+		local soco = backpack:FindFirstChild(TOOL_NAME) or char:FindFirstChild(TOOL_NAME)
+		
+		if soco and soco:IsA("Tool") then
+			soco.ManualActivationOnly = false
+		end
+
+		for _, item in ipairs(char:GetChildren()) do
+			if item:IsA("Tool") and item.Name ~= TOOL_NAME then
+				item.Parent = backpack
+			end
+		end
+
+		if soco and soco.Parent ~= char then
+			soco.Parent = char
+		end
+	end
+
+	char.ChildAdded:Connect(function(child)
+		if child:IsA("Tool") and Flags.AutoPunch then
+			RunService.Heartbeat:Wait()
+			verificarMao()
+		end
+	end)
+
+	backpack.ChildAdded:Connect(function(child)
+		if child.Name == TOOL_NAME and Flags.AutoPunch then
+			RunService.Heartbeat:Wait()
+			verificarMao()
+		end
+	end)
+
+	verificarMao()
+end
+
+-- ── LOOP DE SOCO EM RAJADA SOBREPOSTA ──
 task.spawn(function()
-    while true do
-        task.wait(0.001)
-        if Flags.AutoPunch and not isDead then
-            pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and not isPunchTool(equipped) then
-                    equipped.Parent = LP.Backpack
-                    task.wait(0.01)
-                end
-                local tool = getPunchTool()
-                if tool then
-                    if tool.Parent == LP.Backpack then 
-                        tool.Parent = Character 
-                        task.wait(0.01) 
-                    end
-                    tool:Activate()
-                end
-            end)
-        end
-    end
+	while true do
+		if Flags.AutoPunch and not isDead then
+			local meuChar = LP.Character
+			if meuChar then
+				local socoNaMao = meuChar:FindFirstChild(TOOL_NAME)
+				if socoNaMao and socoNaMao:IsA("Tool") then
+					task.spawn(function() socoNaMao:Activate() end)
+					task.spawn(function() socoNaMao:Activate() end)
+				end
+			end
+		end
+		task.wait(INTERVALO_DO_CLICK) 
+	end
 end)
 
 -- ── FUNÇÕES DE VOO (FLY) ──
@@ -259,20 +327,16 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Loop RenderStepped para Atualizações Físicas Gerais (Speed, Jump, NoClip, Mobile)
 RunService.RenderStepped:Connect(function()
     if Character and Humanoid and HRP then
-        -- NoClip
         if NoclipEnabled then
             for _, part in pairs(Character:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
-        -- Speed e Jump
         Humanoid.WalkSpeed = Speed
         Humanoid.JumpPower = Jump
         
-        -- Mobile Support
         local moveDir = Humanoid.MoveDirection
         if moveDir.Magnitude > 0 then
             local relative = Camera.CFrame:VectorToObjectSpace(moveDir)
@@ -284,8 +348,6 @@ RunService.RenderStepped:Connect(function()
         end
     end
 end)
-
--- ──────────────────────────────────────────────────
 
 Humanoid.Died:Connect(function()
     isDead = true
@@ -310,17 +372,18 @@ local function SetupCharacter(char)
             if tool then tool.Parent = LP.Backpack end
         end)
     end)
+
     if Flags.AutoPunch then
-        task.wait(0.5)
+        task.wait(0.3)
         isDead = false
-        local tool = getPunchTool()
-        if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
+        task.spawn(iniciarMonitoramentoBrabo, char)
     else
         isDead = false
     end
 end
 
 LP.CharacterAdded:Connect(SetupCharacter)
+if Character then task.spawn(iniciarMonitoramentoBrabo, Character) end
 
 local function findRockByCoord(entry)
     local best, bestDist = nil, math.huge
@@ -391,7 +454,11 @@ end
 local function createCloneForEntry(entry)
     local real = findRealRock(entry)
     if not real then return nil end
-    for _, p in ipairs(getAllParts(real)) do pcall(function() sethiddenproperty(p, "Locked", false) end) end
+    
+    pcall(function()
+        for _, p in ipairs(getAllParts(real)) do sethiddenproperty(p, "Locked", false) end
+    end)
+    
     local clone = nil
     pcall(function() clone = real:Clone() end)
     if not clone then
@@ -483,6 +550,7 @@ local farmConfig = {
     autoHandstands = false,
 }
 
+-- ── INTERFACE WINDUI ──
 local Window = WindUI:CreateWindow({
     Title = "Red x Hub",
     Icon = "zap",
@@ -507,10 +575,7 @@ Window:EditOpenButton({
     Draggable = true,
 })
 
-local MainTab = Window:Tab({
-    Title = "Main",
-    Icon = "house",
-})
+local MainTab = Window:Tab({ Title = "Main", Icon = "house" })
 
 local LISTA_1M = {
     "480 RB – 5 em 5", "1.480 RB – 10 em 10", "2.980 RB – 15 em 15", "4.980 RB – 20 em 20",
@@ -542,10 +607,7 @@ MainTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = L
 MainTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
 MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
 
-local FarmTab = Window:Tab({
-    Title = "Auto Farm",
-    Icon = "activity"
-})
+local FarmTab = Window:Tab({ Title = "Auto Farm", Icon = "activity" })
 
 local ToggleW, ToggleS, ToggleP, ToggleH
 
@@ -655,11 +717,7 @@ task.spawn(function()
     end
 end)
 
--- ── ABA PLAYER/JOGADOR INTEGRADA COM TODAS AS FUNÇÕES ──
-local PlayerTab = Window:Tab({
-    Title = "Jogador",
-    Icon = "user"
-})
+local PlayerTab = Window:Tab({ Title = "Jogador", Icon = "user" })
 
 PlayerTab:Input({
     Title = "Velocidade",
@@ -679,43 +737,18 @@ PlayerTab:Input({
     end
 })
 
-PlayerTab:Toggle({
-    Title = "Pulo Infinito",
-    Value = false,
-    Callback = function(v)
-        InfiniteJump = v
-    end
-})
-
-PlayerTab:Toggle({
-    Title = "NoClip",
-    Value = false,
-    Callback = function(v)
-        NoclipEnabled = v
-    end
-})
-
-PlayerTab:Toggle({
-    Title = "Fly",
-    Value = false,
-    Callback = function(v)
-        if v then StartFly() else StopFly() end
-    end
-})
+PlayerTab:Toggle({ Title = "Pulo Infinito", Value = false, Callback = function(v) InfiniteJump = v end })
+PlayerTab:Toggle({ Title = "NoClip", Value = false, Callback = function(v) NoclipEnabled = v end })
+PlayerTab:Toggle({ Title = "Fly", Value = false, Callback = function(v) if v then StartFly() else StopFly() end end })
 
 PlayerTab:Slider({
     Title = "Fly Speed",
     Step = 5,
     Value = { Min = 10, Max = 500, Default = 150 },
-    Callback = function(v)
-        FlySpeed = v
-    end
+    Callback = function(v) FlySpeed = v end
 })
 
-local TeleportTab = Window:Tab({
-    Title = "Teleports",
-    Icon = "map-pin"
-})
+local TeleportTab = Window:Tab({ Title = "Teleports", Icon = "map-pin" })
 
 local function teleportTo(pos)
     pcall(function()
@@ -733,10 +766,7 @@ TeleportTab:Button({Title = "Frozen Island", Callback = function() teleportTo(Ve
 TeleportTab:Button({Title = "Tiny Island", Callback = function() teleportTo(Vector3.new(-36, 15, 1889)) end})
 TeleportTab:Button({Title = "Secret Island", Callback = function() teleportTo(Vector3.new(1951, 21, 6185)) end})
 
-local CombateTab = Window:Tab({
-    Title = "Auto Rocks",
-    Icon = "mountain"
-})
+local CombateTab = Window:Tab({ Title = "Auto Rocks", Icon = "mountain" })
 
 CombateTab:Toggle({
     Title = "Auto Soco",
@@ -744,17 +774,27 @@ CombateTab:Toggle({
     Callback = function(v)
         Flags.AutoPunch = v
         if v then
-            pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and not isPunchTool(equipped) then equipped.Parent = LP.Backpack end
-            end)
-            task.wait(0.05)
-            local tool = getPunchTool()
-            if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
+            if Character then
+                local backpack = LP:FindFirstChild("Backpack")
+                local soco = backpack and backpack:FindFirstChild(TOOL_NAME)
+                if soco then soco.Parent = Character end
+            end
         else
             pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and isPunchTool(equipped) then equipped.Parent = LP.Backpack end
+                local equipped = Character:FindFirstChild(TOOL_NAME)
+                if equipped then equipped.Parent = LP.Backpack end
+                
+                -- MUDANÇA AQUI: Reseta todas as animações ativas de soco para velocidade padrão instantaneamente ao desativar
+                local hum = Character:FindFirstChild("Humanoid")
+                if hum then
+                    for _, track in ipairs(hum:GetPlayingAnimationTracks()) do
+                        if string.find(string.lower(track.Animation.Name), "punch") or string.find(string.lower(track.Animation.AnimationId), "tool") then
+                            track:AdjustSpeed(1)
+                            track.Looped = false
+                            track:Stop()
+                        end
+                    end
+                end
             end)
         end
     end,
@@ -778,13 +818,10 @@ for _, entry in ipairs(ROCKS) do
     rockToggles[lbl] = toggle
 end
 
--- ──────────────────────────────────────────────────────
-
 task.spawn(function()
-    task.wait(0)
+    task.wait(0.5)
     for _, entry in ipairs(ROCKS) do
         local data = createCloneForEntry(entry)
         if data then rockData[entry.label] = data end
-        task.wait(0)
     end
 end)
