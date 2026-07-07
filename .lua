@@ -515,6 +515,7 @@ local farmConfig = {
     autoHandstands = false,
 }
 
+-- ── INTERFACE WINDUI RECONFIGURADA COM BOTÃO FLUTUANTE VERMELHO E REDONDO ──
 local Window = WindUI:CreateWindow({
     Title = "Red x Hub",
     Icon = "zap",
@@ -528,16 +529,18 @@ local Window = WindUI:CreateWindow({
 Window:EditOpenButton({
     Title = "Open Menu",
     Icon = "dumbbell",
-    CornerRadius = UDim.new(0, 16),
-    StrokeThickness = 2,
-    Color = ColorSequence.new(
-        Color3.fromRGB(255, 0, 0),
-        Color3.fromRGB(255, 255, 255)
-    ),
-    OnlyMobile = false,
+    CornerRadius = UDim.new(0.5, 0), -- Bordas redondas nas quinas
+    StrokeThickness = 3,
     Enabled = true,
     Draggable = true,
+    OnlyMobile = false,
+    Scale = 1.2, -- Tamanho grande igual ao do Hitbox Mobile
+    Color = ColorSequence.new(
+        Color3.fromRGB(250, 0, 0), -- Vermelho Primário Vivo
+        Color3.fromRGB(255, 0, 0) -- Vermelho Claro para Efeito Degradê
+    ),
 })
+
 
 local MainTab = Window:Tab({
     Title = "Main",
