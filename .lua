@@ -195,7 +195,7 @@ end
 -- Loop do Auto Punch Otimizado e Acelerado
 task.spawn(function()
     while true do
-        task.wait(0.2)
+        task.wait(0.05)
         if Flags.AutoPunch and not isDead then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
@@ -207,7 +207,7 @@ task.spawn(function()
                 if tool then
                     if tool.Parent == LP.Backpack then 
                         tool.Parent = Character 
-                        task.wait(0.01) 
+                        task.wait(0.001) 
                     end
                     task.spawn(function() tool:Activate() end)
                     task.spawn(function() tool:Activate() end)
