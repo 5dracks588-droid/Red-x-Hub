@@ -13,7 +13,7 @@ local Camera = workspace.CurrentCamera
 local PARKED_POS = Vector3.new(10000, 1000, 10000)
 local Flags = { AutoPunch = false }
 
--- ── CONFIGURAÇÃO DA VELOCIDADE DO SOCO ADICIONADA AQUI ──
+-- ── CONFIGURAÇÃO DA VELOCIDADE DO SOCO ──
 local TOOL_NAME = "Punch"
 local MULTIPLICADOR_VELOCIDADE = 3.92
 
@@ -24,7 +24,7 @@ local rockData = {}
 local rockToggles = {}
 local isDead = false
 
--- ── VARIÁVEIS ADICIONADAS DA ABA PLAYER ──
+-- ── VARIÁVEIS DA ABA PLAYER ──
 local Speed = 250
 local Jump = 50
 local InfiniteJump = false
@@ -286,20 +286,17 @@ UserInputService.JumpRequest:Connect(function()
     end
 end)
 
--- Loop RenderStepped para Atualizações Físicas Gerais (Speed, Jump, NoClip, Mobile)
+-- Loop RenderStepped para Atualizações Físicas Gerais
 RunService.RenderStepped:Connect(function()
     if Character and Humanoid and HRP then
-        -- NoClip
         if NoclipEnabled then
             for _, part in pairs(Character:GetDescendants()) do
                 if part:IsA("BasePart") then part.CanCollide = false end
             end
         end
-        -- Speed e Jump
         Humanoid.WalkSpeed = Speed
         Humanoid.JumpPower = Jump
         
-        -- Mobile Support
         local moveDir = Humanoid.MoveDirection
         if moveDir.Magnitude > 0 then
             local relative = Camera.CFrame:VectorToObjectSpace(moveDir)
@@ -529,18 +526,17 @@ local Window = WindUI:CreateWindow({
 Window:EditOpenButton({
     Title = "Open Menu",
     Icon = "dumbbell",
-    CornerRadius = UDim.new(0.5, 0), -- Bordas redondas nas quinas
+    CornerRadius = UDim.new(0.5, 0),
     StrokeThickness = 3,
     Enabled = true,
     Draggable = true,
     OnlyMobile = false,
-    Scale = 1.2, -- Tamanho grande igual ao do Hitbox Mobile
+    Scale = 1.2,
     Color = ColorSequence.new(
-        Color3.fromRGB(250, 0, 0), -- Vermelho Primário Vivo
-        Color3.fromRGB(255, 0, 0) -- Vermelho Claro para Efeito Degradê
+        Color3.fromRGB(250, 0, 0),
+        Color3.fromRGB(255, 0, 0)
     ),
 })
-
 
 local MainTab = Window:Tab({
     Title = "Main",
@@ -690,7 +686,7 @@ task.spawn(function()
     end
 end)
 
--- ── ABA PLAYER/JOGADOR INTEGRADA COM TODAS AS FUNÇÕES ──
+-- ── ABA PLAYER/JOGADOR INTEGRADA ──
 local PlayerTab = Window:Tab({
     Title = "Jogador",
     Icon = "user"
@@ -714,38 +710,10 @@ PlayerTab:Input({
     end
 })
 
-PlayerTab:Toggle({
-    Title = "Pulo Infinito",
-    Value = false,
-    Callback = function(v)
-        InfiniteJump = v
-    end
-})
-
-PlayerTab:Toggle({
-    Title = "NoClip",
-    Value = false,
-    Callback = function(v)
-        NoclipEnabled = v
-    end
-})
-
-PlayerTab:Toggle({
-    Title = "Fly",
-    Value = false,
-    Callback = function(v)
-        if v then StartFly() else StopFly() end
-    end
-})
-
-PlayerTab:Slider({
-    Title = "Fly Speed",
-    Step = 5,
-    Value = { Min = 10, Max = 500, Default = 150 },
-    Callback = function(v)
-        FlySpeed = v
-    end
-})
+PlayerTab:Toggle({ Title = "Pulo Infinito", Value = false, Callback = function(v) InfiniteJump = v end })
+PlayerTab:Toggle({ Title = "NoClip", Value = false, Callback = function(v) NoclipEnabled = v end })
+PlayerTab:Toggle({ Title = "Fly", Value = false, Callback = function(v) if v then StartFly() else StopFly() end end })
+PlayerTab:Slider({ Title = "Fly Speed", Step = 5, Value = { Min = 10, Max = 500, Default = 150 }, Callback = function(v) FlySpeed = v end })
 
 local TeleportTab = Window:Tab({
     Title = "Teleports",
@@ -753,9 +721,7 @@ local TeleportTab = Window:Tab({
 })
 
 local function teleportTo(pos)
-    pcall(function()
-        if Character and HRP then HRP.CFrame = CFrame.new(pos) end
-    end)
+    pcall(function() if Character and HRP then HRP.CFrame = CFrame.new(pos) end end)
 end
 
 TeleportTab:Button({Title = "Starting Island", Callback = function() teleportTo(Vector3.new(151, 50, 294)) end})
@@ -767,6 +733,98 @@ TeleportTab:Button({Title = "Mystic Island", Callback = function() teleportTo(Ve
 TeleportTab:Button({Title = "Frozen Island", Callback = function() teleportTo(Vector3.new(-2624, 28, -410)) end})
 TeleportTab:Button({Title = "Tiny Island", Callback = function() teleportTo(Vector3.new(-36, 15, 1889)) end})
 TeleportTab:Button({Title = "Secret Island", Callback = function() teleportTo(Vector3.new(1951, 21, 6185)) end})
+
+-- ── ABA MISC (MONITORAMENTO DE JOGADORES - COM ÍCONE DE USERS RECONFIGURADO) ──
+local MiscTab = Window:Tab({
+    Title = "Misc",
+    Icon = "users"
+})
+
+local function GetPlayerNames()
+    local names = {"None"}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP then table.insert(names, p.Name) end
+    end
+    return names
+end
+
+local selectedPlayerObj = nil
+
+local btnStrength = MiscTab:Button({Title = "Força: -"})
+local btnDurability = MiscTab:Button({Title = "Durabilidade: -"})
+local btnRebirths = MiscTab:Button({Title = "Rebirths: -"})
+local btnAgility = MiscTab:Button({Title = "Agilidade: -"})
+local btnKills = MiscTab:Button({Title = "Kills: -"})
+
+local function findValueDeep(parent, name)
+    local found = parent:FindFirstChild(name, true)
+    if found and (found:IsA("ValueBase") or found:IsA("RemoteFunction")) then
+        return found.Value
+    end
+    for _, child in ipairs(parent:GetDescendants()) do
+        if child.Name:lower() == name:lower() and child:IsA("ValueBase") then
+            return child.Value
+        end
+    end
+    return nil
+end
+
+local function updatePlayerStatsDisplay()
+    if not selectedPlayerObj or selectedPlayerObj == "None" then
+        btnStrength:SetTitle("Força: -")
+        btnDurability:SetTitle("Durabilidade: -")
+        btnRebirths:SetTitle("Rebirths: -")
+        btnAgility:SetTitle("Agilidade: -")
+        btnKills:SetTitle("Kills: -")
+        return
+    end
+
+    local p = Players:FindFirstChild(selectedPlayerObj)
+    if p then
+        pcall(function()
+            local s = findValueDeep(p, "Strength") or findValueDeep(p, "strength") or 0
+            local r = findValueDeep(p, "Rebirths") or findValueDeep(p, "rebirths") or 0
+            local k = findValueDeep(p, "Kills") or findValueDeep(p, "kills") or 0
+            local d = findValueDeep(p, "Durability") or findValueDeep(p, "durability") or 0
+            local a = findValueDeep(p, "Agility") or findValueDeep(p, "agility") or 0
+
+            btnStrength:SetTitle("Força: " .. tostring(s))
+            btnDurability:SetTitle("Durabilidade: " .. tostring(d))
+            btnRebirths:SetTitle("Rebirths: " .. tostring(r))
+            btnAgility:SetTitle("Agilidade: " .. tostring(a))
+            btnKills:SetTitle("Kills: " .. tostring(k))
+        end)
+    else
+        selectedPlayerObj = "None"
+    end
+end
+
+local PlayerDropdown = MiscTab:Dropdown({
+    Title = "Selecionar Jogador",
+    Values = GetPlayerNames(),
+    Value = "None",
+    Callback = function(v)
+        selectedPlayerObj = v
+        updatePlayerStatsDisplay()
+    end
+})
+
+MiscTab:Button({
+    Title = "Atualizar Lista",
+    Callback = function()
+        PlayerDropdown:Refresh(GetPlayerNames())
+        PlayerDropdown:Set("None")
+        selectedPlayerObj = "None"
+        updatePlayerStatsDisplay()
+    end
+})
+
+task.spawn(function()
+    while true do
+        task.wait(1)
+        updatePlayerStatsDisplay()
+    end
+end)
 
 local CombateTab = Window:Tab({
     Title = "Auto Rocks",
@@ -823,8 +881,7 @@ for _, entry in ipairs(ROCKS) do
     rockToggles[lbl] = toggle
 end
 
--- ──────────────────────────────────────────────────────
-
+-- ── EXECUÇÕES EM SEGUNDO PLANO E LOOPS FINAIS ──
 task.spawn(function()
     task.wait(0)
     for _, entry in ipairs(ROCKS) do
@@ -833,3 +890,4 @@ task.spawn(function()
         task.wait(0)
     end
 end)
+
