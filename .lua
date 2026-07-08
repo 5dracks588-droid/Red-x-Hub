@@ -532,6 +532,7 @@ Window:EditOpenButton({
     Draggable = true,
     OnlyMobile = false,
     Scale = 1.2,
+    Position = UDim2.new(0, 476, 0.08, 0),
     Color = ColorSequence.new(
         Color3.fromRGB(250, 0, 0),
         Color3.fromRGB(255, 0, 0)
@@ -734,7 +735,7 @@ TeleportTab:Button({Title = "Frozen Island", Callback = function() teleportTo(Ve
 TeleportTab:Button({Title = "Tiny Island", Callback = function() teleportTo(Vector3.new(-36, 15, 1889)) end})
 TeleportTab:Button({Title = "Secret Island", Callback = function() teleportTo(Vector3.new(1951, 21, 6185)) end})
 
--- ── ABA MISC (MONITORAMENTO DE JOGADORES - COM ÍCONE DE USERS RECONFIGURADO) ──
+-- ── ABA MISC (MONITORAMENTO DE JOGADORES) ──
 local MiscTab = Window:Tab({
     Title = "Misc",
     Icon = "users"
@@ -756,11 +757,28 @@ local btnRebirths = MiscTab:Button({Title = "Rebirths: -"})
 local btnAgility = MiscTab:Button({Title = "Agilidade: -"})
 local btnKills = MiscTab:Button({Title = "Kills: -"})
 
+-- NOVA FUNÇÃO SISTEMÁTICA PARA TRAZER O VALOR REAL DAS CLASSIFICAÇÕES (LEADERSTATS)
 local function findValueDeep(parent, name)
+    -- Verifica primeiro na pasta oficial de classificações (leaderstats) para evitar o bug do valor 50000
+    if parent:IsA("Player") then
+        local leaderstats = parent:FindFirstChild("leaderstats")
+        if leaderstats then
+            local stat = leaderstats:FindFirstChild(name) 
+                or leaderstats:FindFirstChild(name:lower()) 
+                or leaderstats:FindFirstChild(name:sub(1,1):upper() .. name:sub(2):lower())
+            
+            if stat and stat:IsA("ValueBase") then
+                return stat.Value
+            end
+        end
+    end
+
+    -- Caso não ache na pasta oficial, faz a busca profunda padrão em ValueBases legítimas
     local found = parent:FindFirstChild(name, true)
-    if found and (found:IsA("ValueBase") or found:IsA("RemoteFunction")) then
+    if found and found:IsA("ValueBase") then
         return found.Value
     end
+    
     for _, child in ipairs(parent:GetDescendants()) do
         if child.Name:lower() == name:lower() and child:IsA("ValueBase") then
             return child.Value
@@ -782,11 +800,11 @@ local function updatePlayerStatsDisplay()
     local p = Players:FindFirstChild(selectedPlayerObj)
     if p then
         pcall(function()
-            local s = findValueDeep(p, "Strength") or findValueDeep(p, "strength") or 0
-            local r = findValueDeep(p, "Rebirths") or findValueDeep(p, "rebirths") or 0
-            local k = findValueDeep(p, "Kills") or findValueDeep(p, "kills") or 0
-            local d = findValueDeep(p, "Durability") or findValueDeep(p, "durability") or 0
-            local a = findValueDeep(p, "Agility") or findValueDeep(p, "agility") or 0
+            local s = findValueDeep(p, "Strength") or 0
+            local r = findValueDeep(p, "Rebirths") or 0
+            local k = findValueDeep(p, "Kills") or 0
+            local d = findValueDeep(p, "Durability") or 0
+            local a = findValueDeep(p, "Agility") or 0
 
             btnStrength:SetTitle("Força: " .. tostring(s))
             btnDurability:SetTitle("Durabilidade: " .. tostring(d))
