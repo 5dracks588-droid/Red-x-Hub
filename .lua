@@ -15,7 +15,7 @@ local Flags = { AutoPunch = false }
 
 -- ── CONFIGURAÇÃO DA VELOCIDADE DO SOCO ──
 local TOOL_NAME = "Punch"
-local MULTIPLICADOR_VELOCIDADE = 3.92
+local MULTIPLICADOR_VELOCIDADE = 10
 
 local activeRockLabel = nil
 local lockConnection = nil
@@ -530,9 +530,7 @@ Window:EditOpenButton({
     StrokeThickness = 3,
     Enabled = true,
     Draggable = true,
-    OnlyMobile = false,
-    Scale = 1.2,
-    Position = UDim2.new(0, 476, 0.08, 0),
+    OnlyMobile = false, 
     Color = ColorSequence.new(
         Color3.fromRGB(250, 0, 0),
         Color3.fromRGB(255, 0, 0)
