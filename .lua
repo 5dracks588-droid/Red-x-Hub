@@ -175,6 +175,15 @@ local function GetPlayerNamesList()
     return list
 end
 
+local function GetPlayerByRole(roleName)
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and GetPlayerRole(p) == roleName then
+            return p
+        end
+    end
+    return nil
+end
+
 -- SAFE AREA
 local SafePart = Instance.new("Part")
 SafePart.Name = "SafeArea"
@@ -688,7 +697,7 @@ RunService.RenderStepped:Connect(function()
             end
             highlight.FillColor = Color3.fromRGB(255, 255, 0)
             highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
-            highlight.FillTransparency = 0.5
+            highlight.FillTransparency = 1
             highlight.OutlineTransparency = 1
 
 
