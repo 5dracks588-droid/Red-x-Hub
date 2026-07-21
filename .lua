@@ -1,223 +1,450 @@
-local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
+local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/refs/heads/main/dist/main.lua"))()
 
+--// Window
+local Window = WindUI:CreateWindow({
+Title = "Murder Mystery 2",
+Icon = "zap",
+Author = "ʀᴇᴅ",
+Folder = "MM2WindUI",
+Size = UDim2.fromOffset(580,430),
+Transparent = true,
+Theme = "Red",
+SideBarWidth = 200,
+MinimizeKey = Enum.KeyCode.RightControl
+})
+
+-- Chamando a função direto da sua Window criada
+Window:EditOpenButton({
+Title = "Open Menu",
+Icon = "zap",
+CornerRadius = UDim.new(0.5, 0),
+StrokeThickness = 2,
+Color = ColorSequence.new(
+Color3.fromHex("FF0000"),
+Color3.fromHex("FF0000")
+),
+        
+OnlyMobile = false,
+Enabled = true,
+Draggable = true,
+})
+
+-- Serviços
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
-local LP = Players.LocalPlayer
-local Character = LP.Character or LP.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local HRP = Character:WaitForChild("HumanoidRootPart")
+local LocalPlayer = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
-local PARKED_POS = Vector3.new(10000, 1000, 10000)
-local Flags = { AutoPunch = false }
+-- Variáveis
+local AimbotEnabled = false
+local FovVisible = false
+local FovSize = 100
+local AutoCoinEnabled = false
+local AutoCoinSpeed = 25
+local StopDuration = 0.25 -- Fixado em 0.25 segundos conforme solicitado
+local SelectedTheme = "Red"
+local AutoSafeEnabled = false
+local safeTpCount = 0
+local KnifeAuraEnabled = false
+local KnifeAuraDistance = 3
+local SavedPositions = {}
+local AutoCoinHideEnabled = false
 
--- ── CONFIGURAÇÃO DA VELOCIDADE DO SOCO ──
-local TOOL_NAME = "Punch"
-local MULTIPLICADOR_VELOCIDADE = 10
+local EspEnabled = false
+local GunEspEnabled = false
+local AntiFlingEnabled = false
+local LowGraphicsEnabled = false
 
-local activeRockLabel = nil
-local lockConnection = nil
-local punchContactOffset = 0
-local rockData = {}
-local rockToggles = {}
-local isDead = false
-
--- ── VARIÁVEIS DA ABA PLAYER ──
-local Speed = 250
+local Speed = 16
 local Jump = 50
+
 local InfiniteJump = false
 local NoclipEnabled = false
+
 local FlyEnabled = false
-local FlySpeed = 150
+local FlySpeed = 30 -- Ajustado padrão para 30 conforme solicitado
 
 local bodyVelocity
 local bodyGyro
 local flyConnection
 local moveVector = Vector3.zero
--- ────────────────────────────────────────
 
-local ROCKS = {
-    {
-        label = "Ancient Jungle Rock 10M", useCoord = false,
-        names = {"Ancient Jungle Rock","AncientJungleRock","Jungle Rock","JungleRock","Rocha da Selva Antiga","Ancient Rock"},
-        durability = "10.000.000", minSize = 6,
-    },
-    {
-        label = "Muscle King Mountain 5M", useCoord = false,
-        names = {"Muscle King Mountain","MuscleKingMountain","Muscle King Rock","MuscleKingRock","King Mountain"},
-        durability = "5.000.000", minSize = 6,
-    },
-    {
-        label = "Stone of Legends 1M", useCoord = true,
-        targetPos = Vector3.new(4147.9, 1006.4, -4106.0),
-        names = {"Stone of Legends","StoneOfLegends","Stone Of Legends","Rock","Stone","Boulder"},
-        durability = "1.000.000", minSize = 1,
-    },
-    {
-        label = "Inferno Rock 750K", useCoord = true,
-        targetPos = Vector3.new(-7256, 18, -1261),
-        names = {"Inferno Rock","InfernoRock","Inferno","FireRock","Fire Rock"},
-        durability = "750.000", minSize = 3,
-    },
-    {
-        label = "Mystic Rock 400K", useCoord = true,
-        targetPos = Vector3.new(2190, 15, 1251),
-        names = {"Mystic Rock","MysticRock","Mystic","Magic Rock","MagicRock"},
-        durability = "400.000", minSize = 3,
-    },
-    {
-        label = "Frozen Rock 150K", useCoord = true,
-        targetPos = Vector3.new(-2559, 13, -253),
-        names = {"Frozen Rock","FrozenRock","Frozen","Ice Rock","IceRock","Frost Rock"},
-        durability = "150.000", minSize = 3,
-    },
-    {
-        label = "Golden Rock 5K", useCoord = true,
-        targetPos = Vector3.new(307, 15, -582),
-        names = {"Golden Rock","GoldenRock","Gold Rock","GoldRock","Golden"},
-        durability = "5.000", minSize = 2,
-    },
-    {
-        label = "Large Rock 100", useCoord = true,
-        targetPos = Vector3.new(168, 3, -147),
-        names = {"Large Rock","LargeRock","Large","Big Rock","BigRock"},
-        durability = "100", minSize = 2,
-    },
-    {
-        label = "Punching Rock 10", useCoord = true,
-        targetPos = Vector3.new(-153, 6, 418),
-        names = {"Punching Rock","PunchingRock","Punching","Punch Rock"},
-        durability = "10", minSize = 1,
-    },
-    {
-        label = "Tyni Rock 0", useCoord = true,
-        targetPos = Vector3.new(16, 5, 2105),
-        names = {"Tyni Rock","TyniRock","Tyni","Tinha Rock","TinhaRock","Tiny Rock","TinyRock"},
-        durability = "0", minSize = 1,
-    },
-}
+local SelectedPlayerToTp = ""
+local CurrentTarget = nil
 
-local BLACKLIST = {
-    "crystal","crystals","egg","eggs","pet","pets","aura","spin","wheel","portal","teleport","npc",
-    "zone","pad","button","gui","billboard","sign","coin","gem","diamond","orb","ring","vip","donate",
-    "shop","store","character","humanoidrootpart","head","torso","baseplate","terrain","camera","anoleg_rock_clone",
-}
+-- VARIÁVEIS DO SISTEMA DE FLING (Mecanismo Kilasik)
+local SelectedPlayerToFling = ""
+local FlingActive = false
+getgenv().OldPos = nil
+getgenv().FPDH = workspace.FallenPartsDestroyHeight
 
-local function isBlacklisted(name)
-    local low = name:lower()
-    for _, w in ipairs(BLACKLIST) do
-        if low == w or low:find(w, 1, true) then return true end
+-- FOV
+local FOVCircle = Drawing.new("Circle")
+FOVCircle.Color = Color3.fromRGB(255,0,0)
+FOVCircle.Thickness = 2
+FOVCircle.Transparency = 1
+FOVCircle.Filled = false
+FOVCircle.Visible = false
+
+-- Tabela para ignorar moedas coletadas
+local Coletadas = {}
+
+LocalPlayer.CharacterAdded:Connect(function()
+    Coletadas = {}
+end)
+
+WindUI:SetTheme("Red")
+
+-- STATS
+local Stats = game:GetService("Stats")
+local HttpService = game:GetService("HttpService")
+
+-- LABELS
+local InfoTab = Window:Tab({Title = "Info", Icon = "house"})
+local CombatTab = Window:Tab({Title = "Combate", Icon = "sword"})
+local FlingTab = Window:Tab({Title = "Fling", Icon = "wind"})
+local EspTab = Window:Tab({Title = "ESP", Icon = "eye"})
+local TeleportTab = Window:Tab({Title = "Teleportes", Icon = "map-pinned"})
+local FarmTab = Window:Tab({Title = "Farm", Icon = "coins"})
+local PlayerTab = Window:Tab({Title = "Player", Icon = "user"})
+local PerformanceTab = Window:Tab({Title = "Desempenho", Icon = "cpu"})
+
+local PingParagraph = InfoTab:Paragraph({Title = "Ping", Desc = "0 ms"})
+local FPSParagraph = InfoTab:Paragraph({Title = "FPS", Desc = "0 FPS"})
+local ServerParagraph = InfoTab:Paragraph({Title = "Servidor", Desc = "0/0"})
+
+-- FPS Loop
+local FPS = 0
+local Last = tick()
+
+RunService.RenderStepped:Connect(function()
+    FPS += 1
+    if tick() - Last >= 1 then
+        local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        PingParagraph:SetDesc(ping .. " ms")
+        FPSParagraph:SetDesc(FPS .. " FPS")
+        ServerParagraph:SetDesc(#Players:GetPlayers() .. "/" .. Players.MaxPlayers)
+        FPS = 0
+        Last = tick()
     end
-    return false
+end)
+
+-- ROLE DETECTOR
+local function GetPlayerRole(player)
+    if not player then return "Innocent" end
+
+    -- 1. Verificação por dados do jogo (se disponíveis)
+    local playerData = player:FindFirstChild("PlayerData")
+    if playerData and playerData:FindFirstChild("Role") then
+        return playerData.Role.Value
+    end
+
+    -- 2. Busca pelas ferramentas na Mochila (não equipado) e no Personagem (equipado)
+    local backpack = player:FindFirstChild("Backpack")
+    local char = player.Character
+
+    local hasKnife = (backpack and backpack:FindFirstChild("Knife")) or (char and char:FindFirstChild("Knife"))
+    local hasGun = (backpack and backpack:FindFirstChild("Gun")) or (char and char:FindFirstChild("Gun"))
+
+    if hasKnife then
+        return "Murderer"
+    elseif hasGun then
+        return "Sheriff"
+    end
+
+    return "Innocent"
 end
 
-local function getObjPos(obj)
-    local p = nil
-    pcall(function()
-        if obj:IsA("BasePart") then p = obj.Position
-        elseif obj:IsA("Model") then
-            p = obj.PrimaryPart and obj.PrimaryPart.Position or obj:GetBoundingBox().Position
-        end
-    end)
-    return p
+local function TeleportToCFrame(targetCFrame)
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(targetCFrame.Position)
+    end
 end
 
-local function getObjSize(obj)
-    local s = Vector3.new(8,8,8)
-    pcall(function()
-        if obj:IsA("BasePart") then s = obj.Size
-        elseif obj:IsA("Model") then local _, b = obj:GetBoundingBox(); s = b end
-    end)
-    return s.Magnitude > 0 and s or Vector3.new(8,8,8)
-end
-
-local function getAllParts(obj)
-    local parts = {}
-    if obj:IsA("BasePart") then table.insert(parts, obj)
-    elseif obj:IsA("Model") then
-        for _, v in ipairs(obj:GetDescendants()) do
-            if v:IsA("BasePart") then table.insert(parts, v) end
+local function GetPlayerNamesList()
+    local list = {}
+    for _,p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer then
+            table.insert(list, p.Name)
         end
     end
-    return parts
+    return list
 end
 
-local function isValidObj(obj)
-    if not (obj:IsA("Model") or obj:IsA("BasePart")) then return false end
-    if isBlacklisted(obj.Name) or obj.Name == "ANOLEG_ROCK_CLONE" then return false end
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character and obj:IsDescendantOf(p.Character) then return false end
+-- SAFE AREA
+local SafePart = Instance.new("Part")
+SafePart.Name = "SafeArea"
+SafePart.Size = Vector3.new(20,1,20)
+SafePart.Position = Vector3.new(10000,500,10000)
+SafePart.Anchored = true
+SafePart.CanCollide = true
+SafePart.Color = Color3.fromRGB(0,255,0)
+SafePart.Material = Enum.Material.Neon
+SafePart.Transparency = 0
+SafePart.Parent = workspace
+
+local function TeleportToSafeArea()
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        LocalPlayer.Character.HumanoidRootPart.CFrame = SafePart.CFrame + Vector3.new(0,3,0)
     end
-    return true
 end
 
-function getPunchTool()
-    for _, name in ipairs({"Punch","PunchTool","Fist","Glove","Boxing Gloves","Punching Gloves"}) do
-        local t = LP.Backpack:FindFirstChild(name) or Character:FindFirstChild(name)
-        if t then return t end
+-- FIND GUN
+local function FindDroppedGun()
+    local gun = workspace:FindFirstChild("GunDrop")
+    if gun then return gun end
+    for _,obj in ipairs(workspace:GetChildren()) do
+        if obj.Name == "GunDrop" or (obj:IsA("Model") and obj:FindFirstChild("GunDrop")) then
+            return obj:FindFirstChild("GunDrop") or obj
+        end
     end
-    for _, v in ipairs(LP.Backpack:GetChildren()) do if v:IsA("Tool") then return v end end
     return nil
 end
 
-local function isPunchTool(tool)
-    if not tool then return false end
-    local low = tool.Name:lower()
-    for _, n in ipairs({"punch","punchtool","fist","glove","boxing"}) do
-        if low:find(n, 1, true) then return true end
-    end
-    return false
-end
+---------------------------------------------------------------------------
+-- [SISTEMA DE AUTO FARM COIN INTEGRADO (VELOCITY)]
+---------------------------------------------------------------------------
+local function GetClosestCoin()
+    local char = LocalPlayer.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
 
--- ── GERENCIADOR DE ANIMAÇÃO RÁPIDA INTEGRADO ──
-local function gerenciarAnimacaoInfinita(character)
-	local humanoid = character:WaitForChild("Humanoid", 5)
-	if not humanoid then return end
+    local menorDistancia = math.huge
+    local moedaAlvo = nil
 
-	humanoid.AnimationPlayed:Connect(function(animationTrack)
-		local animName = string.lower(animationTrack.Animation.Name)
-		local animId = animationTrack.Animation.AnimationId
-
-		if string.find(animName, "punch") or string.find(animName, "attack") or string.find(animId, "tool") then
-			if Flags.AutoPunch then
-                animationTrack.Looped = true 
-                animationTrack:AdjustSpeed(MULTIPLICADOR_VELOCIDADE)
-            else
-                animationTrack.Looped = false
-                animationTrack:AdjustSpeed(1)
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:IsA("BasePart") and obj.Parent and not Coletadas[obj] and obj.Transparency < 1 and obj.CanCollide == false then
+            local nome = string.lower(obj.Name)
+            if nome:find("coin") or nome:find("gold") or nome:find("token") then
+                if obj.Size.X <= 6 and obj.Size.Y <= 6 and obj.Size.Z <= 6 then
+                    local model = obj:FindFirstAncestorOfClass("Model")
+                    if model and not model:FindFirstChild("Lobby") then
+                        local dist = (hrp.Position - obj.Position).Magnitude
+                        if dist < menorDistancia then
+                            menorDistancia = dist
+                            moedaAlvo = obj
+                        end
+                    end
+                end
             end
-		end
-	end)
+        end
+    end
+    return moedaAlvo
 end
 
--- Loop do Auto Punch Otimizado e Acelerado
+-- Loop de Movimentação do Auto Coin Novo
 task.spawn(function()
     while true do
-        task.wait(0.05)
-        if Flags.AutoPunch and not isDead then
-            pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and not isPunchTool(equipped) then
-                    equipped.Parent = LP.Backpack
-                    task.wait(0.01)
-                end
-                local tool = getPunchTool()
-                if tool then
-                    if tool.Parent == LP.Backpack then 
-                        tool.Parent = Character 
-                        task.wait(0.001) 
+        task.wait(0.1)
+        while AutoCoinEnabled do
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            
+            if hrp and hum and hum.Health > 0 then
+                local alvo = GetClosestCoin()
+                
+                if alvo and alvo.Parent then
+                    -- Noclip temporário de movimentação
+                    local noclipConnection
+                    noclipConnection = RunService.Stepped:Connect(function()
+                        if char then
+                            for _, part in ipairs(char:GetChildren()) do
+                                if part:IsA("BasePart") then part.CanCollide = false end
+                            end
+                        end
+                    end)
+                    
+                    local attachment = Instance.new("Attachment")
+                    attachment.Parent = hrp
+                    
+                    local lv = Instance.new("LinearVelocity")
+                    lv.MaxForce = 1e6
+                    lv.VectorVelocity = Vector3.new(0, 0, 0)
+                    lv.Attachment0 = attachment
+                    lv.RelativeTo = Enum.ActuatorRelativeTo.World
+                    lv.Parent = hrp
+
+                    local bg = Instance.new("BodyGyro")
+                    bg.MaxTorque = Vector3.new(1e6, 1e6, 1e6)
+                    bg.D = 100; bg.P = 10000; bg.Parent = hrp
+
+                    local spawnDestino = alvo.Position
+                    if alvo.Parent:IsA("Model") and alvo.Parent.PrimaryPart then
+                        spawnDestino = alvo.Parent.PrimaryPart.Position
+                    elseif alvo.Name == "Coin_Sub" and alvo.Parent:FindFirstChild("Coin") then
+                        spawnDestino = alvo.Parent.Coin.Position
                     end
-                    task.spawn(function() tool:Activate() end)
-                    task.spawn(function() tool:Activate() end)
+                    
+                    local destinoFinal = Vector3.new(spawnDestino.X, spawnDestino.Y + 1.2, spawnDestino.Z)
+
+                    while AutoCoinEnabled and alvo and alvo.Parent do
+                        local atualPos = hrp.Position
+                        local distancia = (atualPos - destinoFinal).Magnitude
+                        bg.CFrame = CFrame.new(atualPos, atualPos + Vector3.new(0, 0, -1))
+                        if distancia <= 0.8 then break end
+                        
+                        local direcao = (destinoFinal - atualPos).Unit
+                        lv.VectorVelocity = direcao * AutoCoinSpeed
+                        task.wait()
+                    end
+
+                    lv.VectorVelocity = Vector3.new(0, 0, 0)
+                    hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+
+                    if noclipConnection then noclipConnection:Disconnect() end
+                    lv:Destroy()
+                    attachment:Destroy()
+                    bg:Destroy()
+
+                    if not AutoCoinEnabled then break end
+                    Coletadas[alvo] = true
+                    task.wait(StopDuration) -- Espera exatamente o tempo fixado (0.5s)
+                else
+                    task.wait(0.5)
                 end
-            end)
+            else
+                task.wait(1)
+            end
         end
     end
 end)
 
--- ── FUNÇÕES DE VOO (FLY) ──
+-- NOCLIP GERAL DA TAB
+RunService.Stepped:Connect(function()
+    if NoclipEnabled and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- AIMBOT TARGETS (Procura apenas o assassino se você for xerife/inocente, ou todos se você for o assassino)
+local function GetClosestPlayerToCenter()
+    local closestPlayer = nil
+    local shortestDistance = FovSize
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    local myRole = GetPlayerRole(LocalPlayer)
+
+    for _,p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("Head") and p.Character:FindFirstChild("Humanoid") and p.Character.Humanoid.Health > 0 then
+            local role = GetPlayerRole(p)
+            local canTarget = false
+
+            if myRole == "Murderer" then
+                canTarget = true
+            else
+                if role == "Murderer" then
+                    canTarget = true
+                end
+            end
+
+            if canTarget then
+                local pos, onScreen = Camera:WorldToViewportPoint(p.Character.Head.Position)
+                if onScreen then
+                    local distance = (Vector2.new(pos.X, pos.Y) - screenCenter).Magnitude
+                    if distance < shortestDistance then
+                        shortestDistance = distance
+                        closestPlayer = p.Character.Head
+                    end
+                end
+            end
+        end
+    end
+    return closestPlayer
+end
+
+-- ESP SYSTEM
+local function UpdateESP()
+    for _,p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character then
+            local char = p.Character
+
+            if EspEnabled and char:FindFirstChild("Head") and char:FindFirstChild("HumanoidRootPart") and char:FindFirstChild("Humanoid") and char.Humanoid.Health > 0 then
+                local role = GetPlayerRole(p)
+                local color = Color3.fromRGB(0,255,0)
+
+                if role == "Murderer" then
+                    color = Color3.fromRGB(255,0,0)
+                elseif role == "Sheriff" then
+                    color = Color3.fromRGB(0,0,255)
+                end
+
+                if char:FindFirstChild("ESPGui") then char.ESPGui:Destroy() end
+
+                local highlight = char:FindFirstChild("ESPHighlight")
+                if not highlight then
+                    highlight = Instance.new("Highlight")
+                    highlight.Name = "ESPHighlight"
+                    highlight.Parent = char
+                end
+                highlight.FillColor = color
+                highlight.OutlineColor = color
+                highlight.FillTransparency = 0.5
+                highlight.OutlineTransparency = 0
+            else
+                if char:FindFirstChild("ESPHighlight") then char.ESPHighlight:Destroy() end
+                if char:FindFirstChild("ESPGui") then char.ESPGui:Destroy() end
+            end
+        end
+    end
+end
+
+-- FPS BOOSTER
+local function CleanObject(obj)
+    if obj:IsA("BasePart") and not obj:IsA("MeshPart") then
+        obj.Material = Enum.Material.SmoothPlastic
+        obj.Reflectance = 0
+    elseif obj:IsA("Texture") or obj:IsA("Decal") then
+        obj:Destroy()
+    elseif obj:IsA("ParticleEmitter") or obj:IsA("Trail") then
+        obj.Enabled = false
+    elseif obj:IsA("Atmosphere") or obj:IsA("Sky") then
+        obj:Destroy()
+    end
+end
+
+local function OptimizeTextures()
+    Lighting.GlobalShadows = false
+    Lighting.FogEnd = 9e9
+    settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+    for _,obj in ipairs(workspace:GetDescendants()) do
+        CleanObject(obj)
+    end
+end
+
+workspace.DescendantAdded:Connect(function(descendant)
+    if LowGraphicsEnabled then
+        task.wait(0.1)
+        if descendant and descendant.Parent then
+            CleanObject(descendant)
+        end
+    end
+end)
+
+-- FLY SYSTEM
+local bodyVelocity
+local bodyGyro
+local flyConnection
+
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+local Humanoid = Character:WaitForChild("Humanoid")
+local HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+
+local function SetupCharacter()
+    Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+    Humanoid = Character:WaitForChild("Humanoid")
+    HumanoidRootPart = Character:WaitForChild("HumanoidRootPart")
+end
+
+LocalPlayer.CharacterAdded:Connect(SetupCharacter)
+
 local function StartFly()
     if FlyEnabled then return end
     FlyEnabled = true
@@ -227,20 +454,20 @@ local function StartFly()
     bodyVelocity = Instance.new("BodyVelocity")
     bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
     bodyVelocity.Velocity = Vector3.zero
-    bodyVelocity.Parent = HRP
+    bodyVelocity.Parent = HumanoidRootPart
 
     bodyGyro = Instance.new("BodyGyro")
     bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
     bodyGyro.P = 100000
     bodyGyro.CFrame = Camera.CFrame
-    bodyGyro.Parent = HRP
+    bodyGyro.Parent = HumanoidRootPart
 
     flyConnection = RunService.RenderStepped:Connect(function()
         local camCF = Camera.CFrame
         local forward = camCF.LookVector
         local right = camCF.RightVector
-
         local direction = Vector3.zero
+
         direction += forward * moveVector.Z
         direction += right * (moveVector.X * 0.45)
 
@@ -251,22 +478,21 @@ local function StartFly()
         end
 
         bodyGyro.CFrame = CFrame.new(
-            HRP.Position,
-            HRP.Position + Camera.CFrame.LookVector
+            HumanoidRootPart.Position,
+            HumanoidRootPart.Position + Camera.CFrame.LookVector
         )
     end)
 end
 
 local function StopFly()
     FlyEnabled = false
-    if Humanoid then Humanoid.PlatformStand = false end
-
-    if flyConnection then flyConnection:Disconnect(); flyConnection = nil end
-    if bodyVelocity then bodyVelocity:Destroy(); bodyVelocity = nil end
-    if bodyGyro then bodyGyro:Destroy(); bodyGyro = nil end
+    Humanoid.PlatformStand = false
+    if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
+    if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
 end
 
--- ── ENTRADAS DE MOUSE/TECLADO E MOBILE DO PLAYER ──
+-- CONTROLES DO FLY
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.W then moveVector = Vector3.new(moveVector.X, 0, -1)
@@ -280,420 +506,513 @@ UserInputService.InputEnded:Connect(function(input)
     elseif input.KeyCode == Enum.KeyCode.A or input.KeyCode == Enum.KeyCode.D then moveVector = Vector3.new(0, 0, moveVector.Z) end
 end)
 
-UserInputService.JumpRequest:Connect(function()
-    if InfiniteJump and Character and Humanoid then
-        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
-    end
-end)
-
--- Loop RenderStepped para Atualizações Físicas Gerais
 RunService.RenderStepped:Connect(function()
-    if Character and Humanoid and HRP then
-        if NoclipEnabled then
-            for _, part in pairs(Character:GetDescendants()) do
-                if part:IsA("BasePart") then part.CanCollide = false end
-            end
+    if not Character or not Humanoid then return end
+    local moveDir = Humanoid.MoveDirection
+    if moveDir.Magnitude > 0 then
+        local relative = Camera.CFrame:VectorToObjectSpace(moveDir)
+        moveVector = Vector3.new(relative.X, 0, -relative.Z)
+    else
+        moveVector = Vector3.zero
+    end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+    if InfiniteJump then
+        local hum = Character and Character:FindFirstChild("Humanoid")
+        if hum then hum:ChangeState(Enum.HumanoidStateType.Jumping) end
+    end
+end)
+
+-- FLING MECANISMO
+local function ExecutarMecanismoFling(TargetPlayer)
+    if not TargetPlayer then return end
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local root = hum and hum.RootPart
+    
+    local tChar = TargetPlayer.Character
+    if not tChar then return end
+    
+    local tHum = tChar:FindFirstChildOfClass("Humanoid")
+    local tRoot = tHum and tHum.RootPart
+    local tHead = tChar:FindFirstChild("Head")
+    local acc = tChar:FindFirstChildOfClass("Accessory")
+    local handle = acc and acc:FindFirstChild("Handle")
+    
+    if char and hum and root then
+        if root.Velocity.Magnitude < 50 then
+            getgenv().OldPos = root.CFrame
         end
-        Humanoid.WalkSpeed = Speed
-        Humanoid.JumpPower = Jump
         
-        local moveDir = Humanoid.MoveDirection
-        if moveDir.Magnitude > 0 then
-            local relative = Camera.CFrame:VectorToObjectSpace(moveDir)
-            moveVector = Vector3.new(relative.X, 0, -relative.Z)
-        else
-            if not (UserInputService:IsKeyDown(Enum.KeyCode.W) or UserInputService:IsKeyDown(Enum.KeyCode.S) or UserInputService:IsKeyDown(Enum.KeyCode.A) or UserInputService:IsKeyDown(Enum.KeyCode.D)) then
-                moveVector = Vector3.zero
+        if tHum and tHum.Sit then return end
+        
+        if tHead then
+            workspace.CurrentCamera.CameraSubject = tHead
+        elseif handle then
+            workspace.CurrentCamera.CameraSubject = handle
+        elseif tHum and tRoot then
+            workspace.CurrentCamera.CameraSubject = tHum
+        end
+        
+        if not tChar:FindFirstChildWhichIsA("BasePart") then return end
+        
+        local animScript = char:FindFirstChild("Animate")
+        if animScript then animScript.Disabled = true end
+        local animator = hum:FindFirstChildOfClass("Animator")
+        if animator then
+            for _, track in ipairs(animator:GetPlayingAnimationTracks()) do track:Stop() end
+        end
+        
+        local FPos = function(BasePart, Pos, Ang)
+            root.CFrame = CFrame.new(BasePart.Position) * Pos * Ang
+            char:SetPrimaryPartCFrame(CFrame.new(BasePart.Position) * Pos * Ang)
+            root.Velocity = Vector3.new(9e7, 9e7 * 10, 9e7)
+            root.RotVelocity = Vector3.new(9e8, 9e8, 9e8)
+        end
+        
+        local SFBasePart = function(BasePart)
+            local TimeToWait = 5
+            local Time = tick()
+            local Angle = 0
+            
+            repeat
+                if root and tHum and tRoot then
+                    if tRoot.AssemblyLinearVelocity.Magnitude > 150 then
+                        break
+                    end
+                    
+                    if BasePart.Velocity.Magnitude < 50 then
+                        Angle = (Angle + 35) % 360
+                        FPos(BasePart, CFrame.new(0, 1.5, 0) + tHum.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, 0) + tHum.MoveDirection * BasePart.Velocity.Magnitude / 1.25, CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                    else
+                        Angle = (Angle + 35) % 360
+                        FPos(BasePart, CFrame.new(0, 1.5, tHum.WalkSpeed), CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                        FPos(BasePart, CFrame.new(0, -1.5, -tHum.WalkSpeed), CFrame.Angles(math.rad(Angle), 0, 0))
+                        task.wait()
+                    end
+                else
+                    break
+                end
+            until Time + TimeToWait < tick() or not FlingActive
+        end
+        
+        workspace.FallenPartsDestroyHeight = 0/0
+        
+        local BV = Instance.new("BodyVelocity")
+        BV.Parent = root
+        BV.Velocity = Vector3.new(0, 0, 0)
+        BV.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        
+        hum:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
+        
+        if tRoot then
+            SFBasePart(tRoot)
+        elseif tHead then
+            SFBasePart(tHead)
+        elseif handle then
+            SFBasePart(handle)
+        end
+        
+        BV:Destroy()
+        hum:SetStateEnabled(Enum.HumanoidStateType.Seated, true)
+        workspace.CurrentCamera.CameraSubject = hum
+        
+        if animScript then animScript.Disabled = false end
+        
+        if getgenv().OldPos then
+            local t = 0
+            repeat
+                root.CFrame = getgenv().OldPos * CFrame.new(0, .5, 0)
+                char:SetPrimaryPartCFrame(getgenv().OldPos * CFrame.new(0, .5, 0))
+                hum:ChangeState("GettingUp")
+                for _, part in pairs(char:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.Velocity, part.RotVelocity = Vector3.zero, Vector3.zero
+                    end
+                end
+                task.wait()
+                t = t + 1
+            until (root.Position - getgenv().OldPos.p).Magnitude < 25 or t > 10
+            workspace.FallenPartsDestroyHeight = getgenv().FPDH
+        end
+    end
+end
+
+-- LOOP PRINCIPAL DO JOGO (RENDERSTEPPED)
+RunService.RenderStepped:Connect(function()
+    local screenCenter = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y / 2)
+    FOVCircle.Position = screenCenter
+    FOVCircle.Radius = FovSize
+    FOVCircle.Visible = FovVisible
+
+    -- AIM LOCK INSTANTÂNEO (Trava a CFrame da câmera no oponente)
+    if AimbotEnabled then
+        local target = GetClosestPlayerToCenter()
+        if target then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, target.Position)
+        end
+    end
+
+    if AntiFlingEnabled and LocalPlayer.Character then
+        for _,p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                for _,part in pairs(p.Character:GetChildren()) do
+                    if part:IsA("BasePart") then part.CanCollide = false end
+                end
+            end
+        end
+    end
+
+    if LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("Humanoid") then
+        LocalPlayer.Character.Humanoid.WalkSpeed = Speed
+        LocalPlayer.Character.Humanoid.JumpPower = Jump
+    end
+
+    UpdateESP()
+
+    -- ESP GUN LIMPO (SEM TEXTO E SEM DISTÂNCIA)
+    local gun = FindDroppedGun()
+    if gun and GunEspEnabled then
+        local part = gun:IsA("BasePart") and gun or gun:FindFirstChildWhichIsA("BasePart")
+        if part then
+            local highlight = gun:FindFirstChild("GunHighlight")
+            if not highlight then
+                highlight = Instance.new("Highlight")
+                highlight.Name = "GunHighlight"
+                highlight.Parent = gun
+            end
+            highlight.FillColor = Color3.fromRGB(255, 255, 0)
+            highlight.OutlineColor = Color3.fromRGB(255, 255, 0)
+            highlight.FillTransparency = 0.5
+            highlight.OutlineTransparency = 1
+
+
+            -- Destrói qualquer BillboardGui de texto antigo para não mostrar nada na tela
+            if gun:FindFirstChild("GunGui") then 
+                gun.GunGui:Destroy() 
+            end
+        end
+    else
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj.Name == "GunDrop" or (obj:IsA("Model") and obj.Name == "GunDrop") then
+                if obj:FindFirstChild("GunHighlight") then obj.GunHighlight:Destroy() end
+                if obj:FindFirstChild("GunGui") then obj.GunGui:Destroy() end
+            end
+        end
+    end
+
+    -- KNIFE AURA
+    if KnifeAuraEnabled and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        local myHRP = LocalPlayer.Character.HumanoidRootPart
+
+        for _,plr in pairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
+                local role = GetPlayerRole(plr)
+                if role == "Murderer" or role == "Sheriff" or role == "Innocent" then
+                    local targetHRP = plr.Character.HumanoidRootPart
+                    local distanceFromSafe = (targetHRP.Position - SafePart.Position).Magnitude
+
+                    if distanceFromSafe > 50 then
+                        if not SavedPositions[plr] then
+                            SavedPositions[plr] = targetHRP.CFrame
+                        end
+
+                        local frontPos = myHRP.Position + (myHRP.CFrame.LookVector * KnifeAuraDistance)
+                        targetHRP.CFrame = CFrame.new(frontPos)
+                        targetHRP.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                        targetHRP.AssemblyAngularVelocity = Vector3.new(0,0,0)
+                    end
+                end
+            end
+        end
+    else
+        for plr, savedCFrame in pairs(SavedPositions) do
+            if plr and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                plr.Character.HumanoidRootPart.CFrame = savedCFrame
+                plr.Character.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
+                plr.Character.HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
+            end
+        end
+        SavedPositions = {}
+    end
+end)
+
+-- AUTO COLLECT GUN DROP
+local AutoCollectGunEnabled = false
+task.spawn(function()
+    while true do
+        task.wait(0)
+        if AutoCollectGunEnabled then
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            local currentHRP = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if currentHRP and hum and hum.Health > 0 then
+                local minhaRole = GetPlayerRole(LocalPlayer)
+                if minhaRole == "Innocent" then
+                    local gun = FindDroppedGun()
+                    if gun then
+                        local part = gun:IsA("BasePart") and gun or gun:FindFirstChildWhichIsA("BasePart")
+                        if part then
+                            local originalCFrame = currentHRP.CFrame
+                            currentHRP.CFrame = part.CFrame
+                            task.wait(0) 
+                            currentHRP.CFrame = originalCFrame
+                            task.wait(50)
+                        end
+                    end
+                end
             end
         end
     end
 end)
 
--- ──────────────────────────────────────────────────
+-- COMBATE ELEMENTOS
+CombatTab:Toggle({Title = "Aimbot", Default = false, Callback = function(v) AimbotEnabled = v end})
+CombatTab:Toggle({Title = "Mostrar FOV", Default = false, Callback = function(v) FovVisible = v end})
+CombatTab:Slider({Title = "FOV", Step = 1, Value = { Min = 50, Max = 500, Default = 100 }, Callback = function(v) FovSize = v end})
+CombatTab:Toggle({Title = "Anti Fling", Default = false, Callback = function(v) AntiFlingEnabled = v end})
+CombatTab:Toggle({Title = "Knife Aura", Default = false, Callback = function(v) KnifeAuraEnabled = v end})
+CombatTab:Slider({Title = "Distância Aura", Step = 1, Value = {Min = 0, Max = 10, Default = 3}, Callback = function(v) KnifeAuraDistance = v end})
 
-local function SetupCharacter(char)
-    Character = char
-    Humanoid = char:WaitForChild("Humanoid")
-    HRP = char:WaitForChild("HumanoidRootPart")
-    isDead = false
-    
-    Humanoid.Died:Connect(function()
-        isDead = true
-        StopFly()
-        pcall(function()
-            local tool = Character:FindFirstChildWhichIsA("Tool")
-            if tool then tool.Parent = LP.Backpack end
-        end)
-    end)
-    
-    task.wait(0.3)
-    task.spawn(gerenciarAnimacaoInfinita, char)
-    
-    if Flags.AutoPunch then
-        task.wait(0.2)
-        isDead = false
-        local tool = getPunchTool()
-        if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
-    else
-        isDead = false
+-- FLING ELEMENTOS
+FlingTab:Button({
+    Title = "Fling murderer",
+    Callback = function()
+        if FlingActive then return end
+        local target = GetPlayerByRole("Murderer")
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            FlingActive = true
+            task.spawn(function()
+                ExecutarMecanismoFling(target)
+                FlingActive = false
+            end)
+        end
+    end
+})
+
+FlingTab:Button({
+    Title = "Fling sherife",
+    Callback = function()
+        if FlingActive then return end
+        local target = GetPlayerByRole("Sheriff")
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            FlingActive = true
+            task.spawn(function()
+                ExecutarMecanismoFling(target)
+                FlingActive = false
+            end)
+        end
+    end
+})
+
+local FlingDropdown = FlingTab:Dropdown({
+    Title = "Lista de Jogadores",
+    Values = GetPlayerNamesList(),
+    Value = "",
+    Callback = function(v) SelectedPlayerToFling = v end
+})
+
+FlingTab:Button({
+    Title = "Fling player",
+    Callback = function()
+        if FlingActive then return end
+        if SelectedPlayerToFling ~= "" then
+            local target = Players:FindFirstChild(SelectedPlayerToFling)
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                FlingActive = true
+                task.spawn(function()
+                    ExecutarMecanismoFling(target)
+                    FlingActive = false
+                end)
+            end
+        end
+    end
+})
+
+local function AtualizarTodasAsListas()
+    local novaLista = GetPlayerNamesList()
+    FlingDropdown:Refresh(novaLista)
+    if PlayerDropdown then
+        PlayerDropdown:Refresh(novaLista)
     end
 end
 
-Humanoid.Died:Connect(function()
-    isDead = true
-    StopFly()
-    pcall(function()
-        local tool = Character:FindFirstChildWhichIsA("Tool")
-        if tool then tool.Parent = LP.Backpack end
-    end)
+Players.PlayerAdded:Connect(function()
+    task.wait(0.5)
+    AtualizarTodasAsListas()
 end)
 
-LP.CharacterAdded:Connect(SetupCharacter)
-if Character then task.spawn(gerenciarAnimacaoInfinita, Character) end
+Players.PlayerRemoving:Connect(function(p)
+    if SelectedPlayerToFling == p.Name then SelectedPlayerToFling = "" end
+    if SelectedPlayerToTp == p.Name then SelectedPlayerToTp = "" end
+    task.wait(0.1)
+    AtualizarTodasAsListas()
+end)
 
-local function findRockByCoord(entry)
-    local best, bestDist = nil, math.huge
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if not isValidObj(obj) then continue end
-        local pos = getObjPos(obj)
-        if pos then
-            local dist = (pos - entry.targetPos).Magnitude
-            if dist < bestDist then bestDist = dist; best = obj end
+-- ESP ELEMENTOS
+EspTab:Toggle({Title = "ESP Jogadores", Default = false, Callback = function(v) EspEnabled = v end})
+EspTab:Toggle({Title = "ESP Arma", Default = false, Callback = function(v) GunEspEnabled = v end})
+
+-- TELEPORTES ELEMENTOS
+TeleportTab:Button({
+    Title = "TP Murderer",
+    Callback = function()
+        local target = GetPlayerByRole("Murderer")
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            TeleportToCFrame(target.Character.HumanoidRootPart.CFrame * CFrame.new(0,3,0))
         end
     end
-    return (bestDist < 100) and best or nil
-end
+})
 
-local function findRockByName(entry)
-    local best, bestScore = nil, -1
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if not isValidObj(obj) then continue end
-        local size = getObjSize(obj)
-        if math.min(size.X, size.Y, size.Z) < (entry.minSize or 5) then continue end
-        local objLow, matchScore = obj.Name:lower(), 0
-        for _, name in ipairs(entry.names) do
-            local nameLow = name:lower()
-            if objLow == nameLow then return obj end
-            if objLow:find(nameLow, 1, true) and #nameLow > matchScore then matchScore = #nameLow end
-        end
-        if matchScore > bestScore then bestScore = matchScore; best = obj end
-    end
-    return best
-end
-
-local function findRealRock(entry)
-    if entry.useCoord then return findRockByCoord(entry) end
-    return findRockByName(entry)
-end
-
-local function makeInvisible(clone)
-    for _, part in ipairs(getAllParts(clone)) do
-        pcall(function()
-            part.CanCollide, part.CanTouch, part.CanQuery, part.Anchored = false, false, false, true
-            part.CastShadow, part.Transparency = false, 1
-            part.AssemblyLinearVelocity, part.AssemblyAngularVelocity = Vector3.zero, Vector3.zero
-        end)
-    end
-    for _, child in ipairs(clone:GetDescendants()) do
-        if child:IsA("Decal") or child:IsA("Texture") or child:IsA("ParticleEmitter")
-        or child:IsA("BillboardGui") or child:IsA("SurfaceGui") or child:IsA("Beam")
-        or child:IsA("Trail") or child:IsA("PointLight") or child:IsA("SpotLight")
-        or child:IsA("SelectionBox") then
-            pcall(function() child:Destroy() end)
+TeleportTab:Button({
+    Title = "TP Sheriff",
+    Callback = function()
+        local target = GetPlayerByRole("Sheriff")
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            TeleportToCFrame(target.Character.HumanoidRootPart.CFrame * CFrame.new(0,3,0))
         end
     end
-end
+})
 
-local function pivotCloneTo(data, pos)
-    local clone = data.cloneObj
-    if not clone or not clone.Parent then return end
-    local cf = CFrame.new(pos)
-    if clone:IsA("Model") and clone.PrimaryPart then
-        pcall(function() clone:PivotTo(cf) end)
-    elseif clone:IsA("BasePart") then
-        pcall(function() clone.CFrame = cf end)
-    else
-        for _, part in ipairs(data.cloneParts) do pcall(function() part.CFrame = cf end) end
-    end
-end
+PlayerDropdown = TeleportTab:Dropdown({
+    Title = "Escolher Jogador",
+    Values = GetPlayerNamesList(),
+    Value = "",
+    Callback = function(v) SelectedPlayerToTp = v end
+})
 
-local function createCloneForEntry(entry)
-    local real = findRealRock(entry)
-    if not real then return nil end
-    for _, p in ipairs(getAllParts(real)) do pcall(function() sethiddenproperty(p, "Locked", false) end) end
-    local clone = nil
-    pcall(function() clone = real:Clone() end)
-    if not clone then
-        clone = Instance.new("Part")
-        clone.Size = getObjSize(real)
-        clone.CFrame = CFrame.new(PARKED_POS)
-    end
-    clone.Name, clone.Parent = "ANOLEG_ROCK_CLONE", workspace
-    local parts = getAllParts(clone)
-    makeInvisible(clone)
-    if clone:IsA("Model") and not clone.PrimaryPart then clone.PrimaryPart = parts[1] end
-    local data = { cloneObj = clone, cloneParts = parts, realRock = real, label = entry.label }
-    pivotCloneTo(data, PARKED_POS)
-    return data
-end
-
-local function calcFrontPos(data)
-    local rockSize = getObjSize(data.realRock)
-    local halfDepth = math.min(rockSize.X, rockSize.Z) / 2
-    if halfDepth > 15 then halfDepth = 15 end
-    local flatLook = Vector3.new(HRP.CFrame.LookVector.X, 0, HRP.CFrame.LookVector.Z)
-    flatLook = flatLook.Magnitude < 0.001 and Vector3.new(0,0,-1) or flatLook.Unit
-    local dist = halfDepth + punchContactOffset
-    return Vector3.new(
-        HRP.Position.X + flatLook.X * dist,
-        HRP.Position.Y,
-        HRP.Position.Z + flatLook.Z * dist
-    )
-end
-
-local function touchRealRock(data)
-    if not data or not data.realRock then return end
-    for _, part in ipairs(getAllParts(data.realRock)) do
-        pcall(function() firetouchinterest(HRP, part, 0); firetouchinterest(HRP, part, 1) end)
-        pcall(function()
-            local arm = Character:FindFirstChild("Right Arm")
-                     or Character:FindFirstChild("RightHand")
-                     or Character:FindFirstChild("RightLowerArm")
-            if arm then firetouchinterest(arm, part, 0); firetouchinterest(arm, part, 1) end
-        end)
-    end
-end
-
-local function stopActiveRock()
-    if lockConnection then lockConnection:Disconnect(); lockConnection = nil end
-    if activeRockLabel and rockData[activeRockLabel] then
-        pivotCloneTo(rockData[activeRockLabel], PARKED_POS)
-    end
-    activeRockLabel = nil
-end
-
-local function activateRock(label)
-    stopActiveRock()
-    local data = rockData[label]
-    if not data then return end
-    activeRockLabel = label
-    pivotCloneTo(data, calcFrontPos(data))
-    lockConnection = RunService.RenderStepped:Connect(function()
-        if activeRockLabel ~= label then lockConnection:Disconnect(); return end
-        pivotCloneTo(data, calcFrontPos(data))
-    end)
-    task.spawn(function()
-        while activeRockLabel == label do
-            task.wait(0.02)
-            touchRealRock(data)
-        end
-    end)
-end
-
-local function deactivateRock(label)
-    if activeRockLabel ~= label then return end
-    stopActiveRock()
-end
-
-local function unequipTool(toolName)
-    local char = LP.Character
-    if char then
-        local tool = char:FindFirstChild(toolName)
-        if tool and tool:IsA("Tool") then
-            tool.Parent = LP.Backpack
+TeleportTab:Button({
+    Title = "TP Jogador",
+    Callback = function()
+        if SelectedPlayerToTp ~= "" then
+            local target = Players:FindFirstChild(SelectedPlayerToTp)
+            if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+                TeleportToCFrame(target.Character.HumanoidRootPart.CFrame * CFrame.new(0,3,0))
+            end
         end
     end
-end
-
-local farmConfig = {
-    autoWeight     = false,
-    autoSitups     = false,
-    autoPushups    = false,
-    autoHandstands = false,
-}
-
--- ── INTERFACE WINDUI RECONFIGURADA COM BOTÃO FLUTUANTE VERMELHO E REDONDO ──
-local Window = WindUI:CreateWindow({
-    Title = "Red x Hub",
-    Icon = "zap",
-    Author = "ғᴇɪᴛᴏ ᴘᴏʀ ʀᴇᴅ",
-    Folder = "MuscleLegendsConfig",
-    Size = UDim2.fromOffset(580, 460),
-    Transparent = true,
-    Theme = "Red",
 })
 
-Window:EditOpenButton({
-    Title = "Open Menu",
-    Icon = "dumbbell",
-    CornerRadius = UDim.new(0.5, 0),
-    StrokeThickness = 3,
-    Enabled = true,
-    Draggable = true,
-    OnlyMobile = false, 
-    Color = ColorSequence.new(
-        Color3.fromRGB(250, 0, 0),
-        Color3.fromRGB(255, 0, 0)
-    ),
+TeleportTab:Button({Title = "Atualizar Lista", Callback = function() AtualizarTodasAsListas() end})
+TeleportTab:Button({Title = "TP Área Segura", Callback = function() TeleportToSafeArea() end})
+
+TeleportTab:Button({
+    Title = "TP Lobby",
+    Callback = function()
+        local lobby = workspace:FindFirstChild("Lobby") or workspace:FindFirstChild("LobbyWorkspace")
+        if lobby then
+            local spawnLocation = lobby:FindFirstChildWhichIsA("SpawnLocation", true)
+            if spawnLocation then
+                TeleportToCFrame(spawnLocation.CFrame * CFrame.new(0, 5, 0))
+                return
+            end
+        end
+        local globalSpawn = workspace:FindFirstChildWhichIsA("SpawnLocation", true)
+        if globalSpawn then
+            TeleportToCFrame(globalSpawn.CFrame * CFrame.new(0, 5, 0))
+            return
+        end
+        TeleportToCFrame(CFrame.new(-108, 145, 12))
+    end
 })
 
-local MainTab = Window:Tab({
-    Title = "Main",
-    Icon = "house",
+TeleportTab:Button({
+    Title = "TP Arena de Jogo",
+    Callback = function()
+        local activeMapFolder = workspace:FindFirstChild("NormalMaps") or workspace:FindFirstChild("Map")
+        if activeMapFolder then
+            for _, mapModel in ipairs(activeMapFolder:GetChildren()) do
+                if mapModel.Name ~= "Lobby" and mapModel.Name ~= "LobbyWorkspace" then
+                    local spawns = mapModel:FindFirstChild("Spawns") or mapModel:FindFirstChild("PlayerSpawns") or mapModel:FindFirstChild("SpawnPoints")
+                    if spawns and #spawns:GetChildren() > 0 then
+                        local spawnPointsList = spawns:GetChildren()
+                        local randomSpawn = spawnPointsList[math.random(1, #spawnPointsList)]
+                        if randomSpawn:IsA("BasePart") then
+                            TeleportToCFrame(CFrame.new(randomSpawn.Position + Vector3.new(0, 3, 0)))
+                            return
+                        end
+                    end
+                    local floor = mapModel:FindFirstChild("Floor") or mapModel:FindFirstChild("Geometry") or mapModel:FindFirstChildWhichIsA("BasePart", true)
+                    if floor then
+                        TeleportToCFrame(CFrame.new(floor.Position + Vector3.new(0, 6, 0)))
+                        return
+                    end
+                end
+            end
+        end
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if obj:IsA("Model") and obj.Name ~= "Lobby" and obj.Name ~= "LobbyWorkspace" then
+                if obj:FindFirstChild("CoinContainer") then
+                    local spawns = obj:FindFirstChild("Spawns") or obj:FindFirstChild("PlayerSpawns")
+                    if spawns and #spawns:GetChildren() > 0 then
+                        local randomSpawn = spawns:GetChildren()[math.random(1, #spawns:GetChildren())]
+                        if randomSpawn:IsA("BasePart") then
+                            TeleportToCFrame(CFrame.new(randomSpawn.Position + Vector3.new(0, 3, 0)))
+                            return
+                        end
+                    end
+                end
+            end
+        end
+    end
 })
 
-local LISTA_1M = {
-    "480 RB – 5 em 5", "1.480 RB – 10 em 10", "2.980 RB – 15 em 15", "4.980 RB – 20 em 20",
-    "7.480 RB – 25 em 25", "10.480 RB – 30 em 30", "13.980 RB – 35 em 35", "17.980 RB – 40 em 40",
-    "22.480 RB – 45 em 45", "27.480 RB – 50 em 50", "32.980 RB – 55 em 55", "38.980 RB – 60 em 60",
-    "45.480 RB – 65 em 65", "52.480 RB – 70 em 70", "59.980 RB – 75 em 75", "67.980 RB – 80 em 80",
-    "76.480 RB – 85 em 85", "85.480 RB – 90 em 90", "94.980 RB – 95 em 95",
-}
-
-local LISTA_5M = {
-    "80 RB – 5 em 5", "220 RB – 8 em 8", "280 RB – 10 em 10", "580 RB – 15 em 15",
-    "980 RB – 20 em 20", "1.480 RB – 25 em 25", "2.080 RB – 30 em 30", "2.780 RB – 35 em 35",
-    "3.580 RB – 40 em 40", "4.480 RB – 45 em 45", "5.480 RB – 50 em 50", "6.580 RB – 55 em 55",
-    "7.780 RB – 60 em 60", "9.080 RB – 65 em 65", "10.480 RB – 70 em 70", "11.980 RB – 75 em 75",
-    "13.580 RB – 80 em 80", "15.280 RB – 85 em 85", "17.080 RB – 90 em 90", "18.980 RB – 95 em 95",
-}
-
-local LISTA_10M = {
-    "52 RB – 5 em 5 (Pet 80 XP)", "208 RB – 10 em 10 (Pet 45 XP)", "440 RB – 15 em 15 (Pet 5 XP)",
-    "748 RB – 20 em 20 (Pet 20 XP)", "1.132 RB – 25 em 25 (Pet 30 XP)", "1.592 RB – 30 em 30 (Pet 55 XP)",
-    "2.132 RB – 35 em 35 (Pet 30 XP)", "2.748 RB – 40 em 40 (Pet 20 XP)", "3.440 RB – 45 em 45 (Pet 25 XP)",
-    "4.208 RB – 50 em 50 (Pet 45 XP)", "5.056 RB – 55 em 55 (Pet 15 XP)", "5.980 RB – 60 em 60 (Pet 0 XP)",
-    "6.980 RB – 65 em 65 (Pet 0 XP)", "8.056 RB – 70 em 70 (Pet 15 XP)", "9.208 RB – 75 em 75 (Pet 45 XP)",
-    "10.440 RB – 80 em 80 (Pet 25 XP)", "11.748 RB – 85 em 85 (Pet 25 XP)", "13.132 RB – 90 em 90 (Pet 30 XP)",
-    "14.592 RB – 95 em 95 (Pet 55 XP)",
-}
-
-MainTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = LISTA_10M[1], Callback = function(v) end })
-MainTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
-MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
-
-local FarmTab = Window:Tab({
-    Title = "Auto Farm",
-    Icon = "activity"
+TeleportTab:Button({
+    Title = "TP Arma Dropada",
+    Callback = function()
+        local gun = FindDroppedGun()
+        if gun then
+            local part = gun:IsA("BasePart") and gun or gun:FindFirstChildWhichIsA("BasePart")
+            if part then
+                TeleportToCFrame(part.CFrame)
+            end
+        end
+    end
 })
 
-local ToggleW, ToggleS, ToggleP, ToggleH
-
-ToggleW = FarmTab:Toggle({
-    Title = "Auto Weight",
-    Value = false,
-    Callback = function(Value)
-        farmConfig.autoWeight = Value
-        if Value then
-            farmConfig.autoSitups = false;     ToggleS:Set(false)
-            farmConfig.autoPushups = false;    ToggleP:Set(false)
-            farmConfig.autoHandstands = false; ToggleH:Set(false)
-        else unequipTool("Weight") end
-    end,
-})
-
-ToggleS = FarmTab:Toggle({
-    Title = "Auto Situps",
-    Value = false,
-    Callback = function(Value)
-        farmConfig.autoSitups = Value
-        if Value then
-            farmConfig.autoWeight = false;     ToggleW:Set(false)
-            farmConfig.autoPushups = false;    ToggleP:Set(false)
-            farmConfig.autoHandstands = false; ToggleH:Set(false)
-        else unequipTool("Situps") end
-    end,
-})
-
-ToggleP = FarmTab:Toggle({
-    Title = "Auto Pushups",
-    Value = false,
-    Callback = function(Value)
-        farmConfig.autoPushups = Value
-        if Value then
-            farmConfig.autoWeight = false;     ToggleW:Set(false)
-            farmConfig.autoSitups = false;     ToggleS:Set(false)
-            farmConfig.autoHandstands = false; ToggleH:Set(false)
-        else unequipTool("Pushups") end
-    end,
-})
-
-ToggleH = FarmTab:Toggle({
-    Title = "Auto Handstands",
-    Value = false,
-    Callback = function(Value)
-        farmConfig.autoHandstands = Value
-        if Value then
-            farmConfig.autoWeight = false;  ToggleW:Set(false)
-            farmConfig.autoSitups = false;  ToggleS:Set(false)
-            farmConfig.autoPushups = false; ToggleP:Set(false)
-        else unequipTool("Handstands") end
-    end,
-})
-
-local lockPos = nil
+-- ====================================================================
+-- COIN FARM ELEMENTOS (COOLDOWN REMOVIDO / CONFIGS SIMPLIFICADAS)
+-- ====================================================================
 FarmTab:Toggle({
-    Title = "Lock Position",
-    Value = false,
-    Callback = function(Value)
-        if Value then
-            lockPos = HRP.CFrame
+    Title = "Auto collect Coin",
+    Default = false,
+    Callback = function(v)
+        AutoCoinEnabled = v
+        if not v then Coletadas = {} end
+    end
+})
+
+FarmTab:Toggle({
+    Title = "Auto TP Área Segura",
+    Default = false,
+    Callback = function(v)
+        AutoSafeEnabled = v
+        if v then
             task.spawn(function()
-                while Value do
-                    task.wait(0.1)
-                    pcall(function()
-                        if Character and HRP then HRP.CFrame = lockPos end
-                    end)
+                while AutoSafeEnabled do
+                    task.wait(0)
+                    local char = LocalPlayer.Character
+                    if char and GetPlayerRole(LocalPlayer) == "Innocent" then
+                        TeleportToSafeArea()
+                    end
                 end
             end)
-        else lockPos = nil end
-    end,
-})
-
-task.spawn(function()
-    while task.wait(0.1) do
-        if Character and HRP then
-            if farmConfig.autoWeight then
-                local tool = LP.Backpack:FindFirstChild("Weight") or Character:FindFirstChild("Weight")
-                if tool then
-                    if tool.Parent ~= Character then tool.Parent = Character end
-                    pcall(function() LP.muscleEvent:FireServer("rep") end)
-                end
-            end
-            if farmConfig.autoSitups then
-                local tool = LP.Backpack:FindFirstChild("Situps") or Character:FindFirstChild("Situps")
-                if tool then
-                    if tool.Parent ~= Character then tool.Parent = Character end
-                    pcall(function() LP.muscleEvent:FireServer("rep") end)
-                end
-            end
-            if farmConfig.autoPushups then
-                local tool = LP.Backpack:FindFirstChild("Pushups") or Character:FindFirstChild("Pushups")
-                if tool then
-                    if tool.Parent ~= Character then tool.Parent = Character end
-                    pcall(function() LP.muscleEvent:FireServer("rep") end)
-               end
-            end
-            if farmConfig.autoHandstands then
-                local tool = LP.Backpack:FindFirstChild("Handstands") or Character:FindFirstChild("Handstands")
-                if tool then
-                    if tool.Parent ~= Character then tool.Parent = Character end
-                    pcall(function() LP.muscleEvent:FireServer("rep") end)
-                end
-            end
         end
     end
-end)
-
--- ── ABA PLAYER/JOGADOR INTEGRADA ──
-local PlayerTab = Window:Tab({
-    Title = "Jogador",
-    Icon = "user"
 })
 
+FarmTab:Toggle({Title = "Auto Collect Gun", Default = false, Callback = function(v) AutoCollectGunEnabled = v end})
+
+-- PLAYER CONFIGS
 PlayerTab:Input({
     Title = "Velocidade",
-    Placeholder = "250",
+    Placeholder = "16",
     Callback = function(text)
         local num = tonumber(text)
         if num then Speed = num end  
@@ -709,201 +1028,17 @@ PlayerTab:Input({
     end
 })
 
-PlayerTab:Toggle({ Title = "Pulo Infinito", Value = false, Callback = function(v) InfiniteJump = v end })
-PlayerTab:Toggle({ Title = "NoClip", Value = false, Callback = function(v) NoclipEnabled = v end })
-PlayerTab:Toggle({ Title = "Fly", Value = false, Callback = function(v) if v then StartFly() else StopFly() end end })
-PlayerTab:Slider({ Title = "Fly Speed", Step = 5, Value = { Min = 10, Max = 500, Default = 150 }, Callback = function(v) FlySpeed = v end })
+PlayerTab:Toggle({Title = "Pulo Infinito", Default = false, Callback = function(v) InfiniteJump = v end})
+PlayerTab:Toggle({Title = "NoClip", Default = false, Callback = function(v) NoclipEnabled = v end})
+PlayerTab:Toggle({Title = "Fly", Default = false, Callback = function(v) if v then StartFly() else StopFly() end end})
+PlayerTab:Slider({Title = "Fly Speed", Step = 5, Value = {Min = 10, Max = 200, Default = 30}, Callback = function(v) FlySpeed = v end}) -- Padrão modificado para 30
 
-local TeleportTab = Window:Tab({
-    Title = "Teleports",
-    Icon = "map-pin"
-})
-
-local function teleportTo(pos)
-    pcall(function() if Character and HRP then HRP.CFrame = CFrame.new(pos) end end)
-end
-
-TeleportTab:Button({Title = "Starting Island", Callback = function() teleportTo(Vector3.new(151, 50, 294)) end})
-TeleportTab:Button({Title = "Jungle Island", Callback = function() teleportTo(Vector3.new(-8686, 153, 2392)) end})
-TeleportTab:Button({Title = "Muscle King Island", Callback = function() teleportTo(Vector3.new(-8626, 115, -5731)) end})
-TeleportTab:Button({Title = "Legends Island", Callback = function() teleportTo(Vector3.new(4602, 1009, -3898)) end})
-TeleportTab:Button({Title = "Flaming Island", Callback = function() teleportTo(Vector3.new(-6760, 28, -1285)) end})
-TeleportTab:Button({Title = "Mystic Island", Callback = function() teleportTo(Vector3.new(2250, 28, 1073)) end})
-TeleportTab:Button({Title = "Frozen Island", Callback = function() teleportTo(Vector3.new(-2624, 28, -410)) end})
-TeleportTab:Button({Title = "Tiny Island", Callback = function() teleportTo(Vector3.new(-36, 15, 1889)) end})
-TeleportTab:Button({Title = "Secret Island", Callback = function() teleportTo(Vector3.new(1951, 21, 6185)) end})
-
--- ── ABA MISC (MONITORAMENTO DE JOGADORES) ──
-local MiscTab = Window:Tab({
-    Title = "Misc",
-    Icon = "users"
-})
-
-local function GetPlayerNames()
-    local names = {"None"}
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP then table.insert(names, p.Name) end
-    end
-    return names
-end
-
-local selectedPlayerObj = nil
-
-local btnStrength = MiscTab:Button({Title = "Força: -"})
-local btnDurability = MiscTab:Button({Title = "Durabilidade: -"})
-local btnRebirths = MiscTab:Button({Title = "Rebirths: -"})
-local btnAgility = MiscTab:Button({Title = "Agilidade: -"})
-local btnKills = MiscTab:Button({Title = "Kills: -"})
-
--- NOVA FUNÇÃO SISTEMÁTICA PARA TRAZER O VALOR REAL DAS CLASSIFICAÇÕES (LEADERSTATS)
-local function findValueDeep(parent, name)
-    -- Verifica primeiro na pasta oficial de classificações (leaderstats) para evitar o bug do valor 50000
-    if parent:IsA("Player") then
-        local leaderstats = parent:FindFirstChild("leaderstats")
-        if leaderstats then
-            local stat = leaderstats:FindFirstChild(name) 
-                or leaderstats:FindFirstChild(name:lower()) 
-                or leaderstats:FindFirstChild(name:sub(1,1):upper() .. name:sub(2):lower())
-            
-            if stat and stat:IsA("ValueBase") then
-                return stat.Value
-            end
-        end
-    end
-
-    -- Caso não ache na pasta oficial, faz a busca profunda padrão em ValueBases legítimas
-    local found = parent:FindFirstChild(name, true)
-    if found and found:IsA("ValueBase") then
-        return found.Value
-    end
-    
-    for _, child in ipairs(parent:GetDescendants()) do
-        if child.Name:lower() == name:lower() and child:IsA("ValueBase") then
-            return child.Value
-        end
-    end
-    return nil
-end
-
-local function updatePlayerStatsDisplay()
-    if not selectedPlayerObj or selectedPlayerObj == "None" then
-        btnStrength:SetTitle("Força: -")
-        btnDurability:SetTitle("Durabilidade: -")
-        btnRebirths:SetTitle("Rebirths: -")
-        btnAgility:SetTitle("Agilidade: -")
-        btnKills:SetTitle("Kills: -")
-        return
-    end
-
-    local p = Players:FindFirstChild(selectedPlayerObj)
-    if p then
-        pcall(function()
-            local s = findValueDeep(p, "Strength") or 0
-            local r = findValueDeep(p, "Rebirths") or 0
-            local k = findValueDeep(p, "Kills") or 0
-            local d = findValueDeep(p, "Durability") or 0
-            local a = findValueDeep(p, "Agility") or 0
-
-            btnStrength:SetTitle("Força: " .. tostring(s))
-            btnDurability:SetTitle("Durabilidade: " .. tostring(d))
-            btnRebirths:SetTitle("Rebirths: " .. tostring(r))
-            btnAgility:SetTitle("Agilidade: " .. tostring(a))
-            btnKills:SetTitle("Kills: " .. tostring(k))
-        end)
-    else
-        selectedPlayerObj = "None"
-    end
-end
-
-local PlayerDropdown = MiscTab:Dropdown({
-    Title = "Selecionar Jogador",
-    Values = GetPlayerNames(),
-    Value = "None",
+-- DESEMPENHO CONFIGS
+PerformanceTab:Toggle({
+    Title = "Modo Leve",
+    Default = false,
     Callback = function(v)
-        selectedPlayerObj = v
-        updatePlayerStatsDisplay()
+        LowGraphicsEnabled = v
+        if v then OptimizeTextures() end
     end
 })
-
-MiscTab:Button({
-    Title = "Atualizar Lista",
-    Callback = function()
-        PlayerDropdown:Refresh(GetPlayerNames())
-        PlayerDropdown:Set("None")
-        selectedPlayerObj = "None"
-        updatePlayerStatsDisplay()
-    end
-})
-
-task.spawn(function()
-    while true do
-        task.wait(1)
-        updatePlayerStatsDisplay()
-    end
-end)
-
-local CombateTab = Window:Tab({
-    Title = "Auto Rocks",
-    Icon = "mountain"
-})
-
-CombateTab:Toggle({
-    Title = "Auto Soco",
-    Value = false,
-    Callback = function(v)
-        Flags.AutoPunch = v
-        if v then
-            pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and not isPunchTool(equipped) then equipped.Parent = LP.Backpack end
-            end)
-            task.wait(0.05)
-            local tool = getPunchTool()
-            if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
-        else
-            pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and isPunchTool(equipped) then equipped.Parent = LP.Backpack end
-                
-                if Humanoid then
-                    for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
-                        if string.find(string.lower(track.Animation.Name), "punch") or string.find(string.lower(track.Animation.AnimationId), "tool") then
-                            track:AdjustSpeed(1)
-                            track.Looped = false
-                            track:Stop()
-                        end
-                    end
-                end
-            end)
-        end
-    end,
-})
-
-for _, entry in ipairs(ROCKS) do
-    local lbl = entry.label
-    local toggle = CombateTab:Toggle({
-        Title = lbl,
-        Value = false,
-        Callback = function(v)
-            if v then
-                if activeRockLabel and activeRockLabel ~= lbl then
-                    local prevToggle = rockToggles[activeRockLabel]
-                    if prevToggle then pcall(function() prevToggle:Set(false) end) end
-                end
-                activateRock(lbl)
-            else deactivateRock(lbl) end
-        end,
-    })
-    rockToggles[lbl] = toggle
-end
-
--- ── EXECUÇÕES EM SEGUNDO PLANO E LOOPS FINAIS ──
-task.spawn(function()
-    task.wait(0)
-    for _, entry in ipairs(ROCKS) do
-        local data = createCloneForEntry(entry)
-        if data then rockData[entry.label] = data end
-        task.wait(0)
-    end
-end)
-
