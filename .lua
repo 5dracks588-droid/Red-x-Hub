@@ -515,7 +515,7 @@ local farmConfig = {
 -- ── INTERFACE WINDUI RECONFIGURADA COM BOTÃO FLUTUANTE VERMELHO E REDONDO ──
 local Window = WindUI:CreateWindow({
     Title = "Red x Hub",
-    Icon = "zap",
+    Icon = "crown",
     Author = "zx",
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580, 460),
@@ -525,7 +525,7 @@ local Window = WindUI:CreateWindow({
 
 Window:EditOpenButton({
     Title = "Open Menu",
-    Icon = "dumbbell",
+    Icon = "crown",
     CornerRadius = UDim.new(0.5, 0),
     StrokeThickness = 2,
     Enabled = true,
