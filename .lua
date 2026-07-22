@@ -574,7 +574,7 @@ MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LIS
 
 local FarmTab = Window:Tab({
     Title = "Auto Farm",
-    Icon = "activity"
+    Icon = "dumbbell"
 })
 
 local ToggleW, ToggleS, ToggleP, ToggleH
