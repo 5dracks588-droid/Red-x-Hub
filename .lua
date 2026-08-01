@@ -520,7 +520,7 @@ local Window = WindUI:CreateWindow({
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
-    Theme = "Red",
+    Theme = "Crimson",
 })
 
 Window:EditOpenButton({
@@ -532,8 +532,8 @@ Window:EditOpenButton({
     Draggable = true,
     OnlyMobile = false, 
     Color = ColorSequence.new(
-        Color3.fromRGB(250, 0, 0),
-        Color3.fromRGB(255, 0, 0)
+        Color3.fromRGB(139, 0, 0),
+        Color3.fromRGB(0, 0, 0)
     ),
 })
 
