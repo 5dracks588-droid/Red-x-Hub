@@ -15,7 +15,7 @@ local Flags = { AutoPunch = false }
 
 -- ── CONFIGURAÇÃO DA VELOCIDADE DO SOCO ──
 local TOOL_NAME = "Punch"
-local MULTIPLICADOR_VELOCIDADE = 10
+local MULTIPLICADOR_VELOCIDADE = 50
 
 local activeRockLabel = nil
 local lockConnection = nil
@@ -514,9 +514,9 @@ local farmConfig = {
 
 -- ── INTERFACE WINDUI RECONFIGURADA COM BOTÃO FLUTUANTE VERMELHO E REDONDO ──
 local Window = WindUI:CreateWindow({
-    Title = "Red x Hub",
+    Title = "Muscle Legends",
     Icon = "crown",
-    Author = "ғᴇɪᴛᴏ ᴘᴏʀ ϟʀᴇᴅϟツ",
+    Author = "ʀᴇᴅ",
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
