@@ -11,7 +11,7 @@ local Window = WindUI:CreateWindow({
 })
 
 Window:EditOpenButton({
-    Title = "Open Menu",
+    Title = '<font color="rgb(139, 0, 0)">Open Menu</font>',
     Icon = "crown",
     CornerRadius = UDim.new(0.5, 0),
     StrokeThickness = 2,
