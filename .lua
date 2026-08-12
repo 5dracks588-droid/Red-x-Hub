@@ -3,7 +3,7 @@ local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footag
 local Window = WindUI:CreateWindow({
     Title = "Muscle Legends",
     Icon = "crown",
-    Author = "ʀᴇᴅ",
+    Author = "red",
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580, 460),
     Transparent = true,
@@ -23,6 +23,18 @@ Window:EditOpenButton({
         Color3.fromRGB(0, 0, 0)
     ),
 })
+
+-- ──────────────────────────────────────────────────────────────────
+-- FUNÇÃO AUXILIAR DE FORMATAÇÃO DE NÚMEROS (COM VÍRGULAS)
+-- ──────────────────────────────────────────────────────────────────
+local function formatNumber(val)
+    local s = tostring(math.floor(tonumber(val) or 0))
+    local pattern = "(%d)(%d%d%d)$"
+    while s:match(pattern) do
+        s = s:gsub(pattern, "%1,%2")
+    end
+    return s
+end
 
 -- ──────────────────────────────────────────────────────────────────
 -- 2. SERVIÇOS, VARIÁVEIS E CONSTANTES
@@ -401,6 +413,28 @@ MainTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = L
 MainTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
 MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
 
+-- ABA: STATS (NOVA)
+local StatsTab = Window:Tab({ Title = "Stats", Icon = "bar-chart-3" })
+local myStr = StatsTab:Button({Title = "Força: 0"})
+local myDur = StatsTab:Button({Title = "Durabilidade: 0"})
+local myAgi = StatsTab:Button({Title = "Agilidade: 0"})
+local myKil = StatsTab:Button({Title = "Kills: 0"})
+local myReb = StatsTab:Button({Title = "Rebirths: 0"})
+
+task.spawn(function()
+    while task.wait(1) do
+        if LP then
+            pcall(function()
+                myStr:SetTitle("Força: " .. formatNumber(findValueDeep(LP, "Strength") or 0))
+                myDur:SetTitle("Durabilidade: " .. formatNumber(findValueDeep(LP, "Durability") or 0))
+                myAgi:SetTitle("Agilidade: " .. formatNumber(findValueDeep(LP, "Agility") or 0))
+                myKil:SetTitle("Kills: " .. formatNumber(findValueDeep(LP, "Kills") or 0))
+                myReb:SetTitle("Rebirths: " .. formatNumber(findValueDeep(LP, "Rebirths") or 0))
+            end)
+        end
+    end
+end)
+
 -- ABA: AUTO FARM
 local FarmTab = Window:Tab({ Title = "Auto Farm", Icon = "dumbbell" })
 local ToggleW, ToggleS, ToggleP, ToggleH, lockPos
@@ -477,11 +511,11 @@ local function updatePlayerStatsDisplay()
     local p = Players:FindFirstChild(selectedPlayerObj)
     if p then
         pcall(function()
-            btnStrength:SetTitle("Força: " .. tostring(findValueDeep(p, "Strength") or 0))
-            btnDurability:SetTitle("Durabilidade: " .. tostring(findValueDeep(p, "Durability") or 0))
-            btnRebirths:SetTitle("Rebirths: " .. tostring(findValueDeep(p, "Rebirths") or 0))
-            btnAgility:SetTitle("Agilidade: " .. tostring(findValueDeep(p, "Agility") or 0))
-            btnKills:SetTitle("Kills: " .. tostring(findValueDeep(p, "Kills") or 0))
+            btnStrength:SetTitle("Força: " .. formatNumber(findValueDeep(p, "Strength") or 0))
+            btnDurability:SetTitle("Durabilidade: " .. formatNumber(findValueDeep(p, "Durability") or 0))
+            btnRebirths:SetTitle("Rebirths: " .. formatNumber(findValueDeep(p, "Rebirths") or 0))
+            btnAgility:SetTitle("Agilidade: " .. formatNumber(findValueDeep(p, "Agility") or 0))
+            btnKills:SetTitle("Kills: " .. formatNumber(findValueDeep(p, "Kills") or 0))
         end)
     else selectedPlayerObj = "None" end
 end
@@ -612,3 +646,4 @@ end)
 
 LP.CharacterAdded:Connect(SetupCharacter)
 if Character then task.spawn(SetupCharacter, Character) end
+
