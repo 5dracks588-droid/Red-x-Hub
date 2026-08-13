@@ -5,22 +5,46 @@ local Window = WindUI:CreateWindow({
     Icon = "crown",
     Author = "red",
     Folder = "MuscleLegendsConfig",
-    Size = UDim2.fromOffset(580, 460),
+    Size = UDim2.fromOffset(500, 350),
     Transparent = true,
     Theme = "Crimson",
 })
 
+-- APLICAÇÃO DO WALLPAPER DENTRO DO MENU
+pcall(function()
+    local mainFrame = Window.UIElements and Window.UIElements.Main or Window.Frame or Window.Container
+    
+    if not mainFrame and Window.Root then
+        mainFrame = Window.Root:FindFirstChildOfClass("Frame")
+    end
+    
+    if mainFrame then
+        mainFrame.BackgroundTransparency = 0.4
+        
+        local bgImage = Instance.new("ImageLabel")
+        bgImage.Name = "MenuWallpaper"
+        bgImage.Size = UDim2.fromScale(1, 1)
+        bgImage.Position = UDim2.fromScale(0, 0)
+        bgImage.Image = "rbxassetid://71388509379511" -- Cole o ID da sua imagem aqui
+        bgImage.BackgroundTransparency = 1
+        bgImage.ImageTransparency = 0.2 -- Transparência da imagem (0 a 1)
+        bgImage.ScaleType = Enum.ScaleType.Crop
+        bgImage.ZIndex = 1
+        bgImage.Parent = mainFrame
+    end
+end)
+
 Window:EditOpenButton({
     Title = "Open Menu",
-    Icon = "crown",
+    Icon = "rbxassetid://105346483918041",
     CornerRadius = UDim.new(0.5, 0),
     StrokeThickness = 2,
     Enabled = true,
     Draggable = true,
     OnlyMobile = false, 
     Color = ColorSequence.new(
-        Color3.fromRGB(139, 0, 0), 
-        Color3.fromRGB(139, 0, 0)
+        Color3.fromRGB(255, 0, 0), 
+        Color3.fromRGB(255, 0, 0)
     ),
 })
 
