@@ -1,7 +1,7 @@
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 
 local Window = WindUI:CreateWindow({
-    Title = "Muscle Legends",
+    Title = "Muscle Legends | Red x Hub",
     Icon = "crown",
     Author = "red",
     Folder = "MuscleLegendsConfig",
@@ -20,20 +20,42 @@ Window:EditOpenButton({
     OnlyMobile = false, 
     Color = ColorSequence.new(
         Color3.fromRGB(139, 0, 0), 
-        Color3.fromRGB(0, 0, 0)
+        Color3.fromRGB(139, 0, 0)
     ),
 })
 
 -- ──────────────────────────────────────────────────────────────────
--- FUNÇÃO AUXILIAR DE FORMATAÇÃO DE NÚMEROS (COM VÍRGULAS)
+-- FUNÇÃO AUXILIAR DE FORMATAÇÃO DE NÚMEROS (SEPARADOR DE MILHARES)
+-- Formata valores de forma legível: Ex. 838392.382 -> 838,392.382
 -- ──────────────────────────────────────────────────────────────────
 local function formatNumber(val)
-    local s = tostring(math.floor(tonumber(val) or 0))
-    local pattern = "(%d)(%d%d%d)$"
-    while s:match(pattern) do
-        s = s:gsub(pattern, "%1,%2")
+    if not val then return "0" end
+    
+    -- Tratamento caso venha uma string com vírgula de decimal
+    local str = tostring(val):gsub(",", ".")
+    local num = tonumber(str)
+    if not num then return tostring(val) end
+
+    -- Separa a parte inteira da decimal
+    local formattedInt = tostring(math.floor(math.abs(num)))
+    local decimalPart = str:match("%.(%d+)")
+
+    -- Adiciona vírgula a cada 3 dígitos
+    local k
+    while true do
+        formattedInt, k = string.gsub(formattedInt, "^(-?%d+)(%d%d%d)", '%1,%2')
+        if k == 0 then break end
     end
-    return s
+
+    if num < 0 then
+        formattedInt = "-" .. formattedInt
+    end
+
+    if decimalPart then
+        return formattedInt .. "." .. decimalPart
+    else
+        return formattedInt
+    end
 end
 
 -- ──────────────────────────────────────────────────────────────────
@@ -107,13 +129,13 @@ local LISTA_10M = {
 }
 
 local ROCKS = {
-    { label = "Ancient Jungle Rock 10M", useCoord = false, names = {"Ancient Jungle Rock","AncientJungleRock","Jungle Rock","JungleRock","Rocha da Selva Antiga","Ancient Rock"}, durability = "10.000.000", minSize = 6 },
-    { label = "Muscle King Mountain 5M", useCoord = false, names = {"Muscle King Mountain","MuscleKingMountain","Muscle King Rock","MuscleKingRock","King Mountain"}, durability = "5.000.000", minSize = 6 },
-    { label = "Stone of Legends 1M", useCoord = true, targetPos = Vector3.new(4147.9, 1006.4, -4106.0), names = {"Stone of Legends","StoneOfLegends","Stone Of Legends","Rock","Stone","Boulder"}, durability = "1.000.000", minSize = 1 },
-    { label = "Inferno Rock 750K", useCoord = true, targetPos = Vector3.new(-7256, 18, -1261), names = {"Inferno Rock","InfernoRock","Inferno","FireRock","Fire Rock"}, durability = "750.000", minSize = 3 },
-    { label = "Mystic Rock 400K", useCoord = true, targetPos = Vector3.new(2190, 15, 1251), names = {"Mystic Rock","MysticRock","Mystic","Magic Rock","MagicRock"}, durability = "400.000", minSize = 3 },
-    { label = "Frozen Rock 150K", useCoord = true, targetPos = Vector3.new(-2559, 13, -253), names = {"Frozen Rock","FrozenRock","Frozen","Ice Rock","IceRock","Frost Rock"}, durability = "150.000", minSize = 3 },
-    { label = "Golden Rock 5K", useCoord = true, targetPos = Vector3.new(307, 15, -582), names = {"Golden Rock","GoldenRock","Gold Rock","GoldRock","Golden"}, durability = "5.000", minSize = 2 },
+    { label = "Ancient Jungle Rock 10M", useCoord = false, names = {"Ancient Jungle Rock","AncientJungleRock","Jungle Rock","JungleRock","Rocha da Selva Antiga","Ancient Rock"}, durability = "10M", minSize = 6 },
+    { label = "Muscle King Mountain 5M", useCoord = false, names = {"Muscle King Mountain","MuscleKingMountain","Muscle King Rock","MuscleKingRock","King Mountain"}, durability = "5M", minSize = 6 },
+    { label = "Stone of Legends 1M", useCoord = true, targetPos = Vector3.new(4147.9, 1006.4, -4106.0), names = {"Stone of Legends","StoneOfLegends","Stone Of Legends","Rock","Stone","Boulder"}, durability = "1M", minSize = 1 },
+    { label = "Inferno Rock 750K", useCoord = true, targetPos = Vector3.new(-7256, 18, -1261), names = {"Inferno Rock","InfernoRock","Inferno","FireRock","Fire Rock"}, durability = "750K", minSize = 3 },
+    { label = "Mystic Rock 400K", useCoord = true, targetPos = Vector3.new(2190, 15, 1251), names = {"Mystic Rock","MysticRock","Mystic","Magic Rock","MagicRock"}, durability = "400K", minSize = 3 },
+    { label = "Frozen Rock 150K", useCoord = true, targetPos = Vector3.new(-2559, 13, -253), names = {"Frozen Rock","FrozenRock","Frozen","Ice Rock","IceRock","Frost Rock"}, durability = "150K", minSize = 3 },
+    { label = "Golden Rock 5K", useCoord = true, targetPos = Vector3.new(307, 15, -582), names = {"Golden Rock","GoldenRock","Gold Rock","GoldRock","Golden"}, durability = "5K", minSize = 2 },
     { label = "Large Rock 100", useCoord = true, targetPos = Vector3.new(168, 3, -147), names = {"Large Rock","LargeRock","Large","Big Rock","BigRock"}, durability = "100", minSize = 2 },
     { label = "Punching Rock 10", useCoord = true, targetPos = Vector3.new(-153, 6, 418), names = {"Punching Rock","PunchingRock","Punching","Punch Rock"}, durability = "10", minSize = 1 },
     { label = "Tyni Rock 0", useCoord = true, targetPos = Vector3.new(16, 5, 2105), names = {"Tyni Rock","TyniRock","Tyni","Tinha Rock","TinhaRock","Tiny Rock","TinyRock"}, durability = "0", minSize = 1 },
@@ -413,8 +435,8 @@ MainTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = L
 MainTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
 MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
 
--- ABA: STATS (NOVA)
-local StatsTab = Window:Tab({ Title = "Stats", Icon = "bar-chart-3" })
+-- ABA: STATS
+local StatsTab = Window:Tab({ Title = "Stats", Icon = ​"user-check" })
 local myStr = StatsTab:Button({Title = "Força: 0"})
 local myDur = StatsTab:Button({Title = "Durabilidade: 0"})
 local myAgi = StatsTab:Button({Title = "Agilidade: 0"})
@@ -570,8 +592,70 @@ for _, entry in ipairs(ROCKS) do
     })
 end
 
+-- ABA: OUTROS
+local OutrosTab = Window:Tab({ Title = "Outros", Icon = "boxes" })
+
+local function eatFood()
+    local backpack = LP:FindFirstChild("Backpack")
+    if not backpack or not Character then return end
+
+    -- Tabela de itens/habilidades de treino e combate que NÃO devem ser usados
+    local ignoredItems = {
+        ["weight"] = true,
+        ["situps"] = true,
+        ["pushups"] = true,
+        ["handstands"] = true,
+        ["stomp"] = true,
+        ["ground slam"] = true,
+        ["ground punch"] = true,
+        ["slam"] = true,
+        ["groundslam"] = true,
+        ["groundpunch"] = true
+    }
+
+    local toolsToEat = {}
+
+    -- Procura no inventário
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") then
+            local toolName = tool.Name:lower()
+            
+            -- Verifica se o item está na lista de ignorados ou se é soco
+            local isIgnored = false
+            for key, _ in pairs(ignoredItems) do
+                if toolName:find(key, 1, true) then
+                    isIgnored = true
+                    break
+                end
+            end
+
+            if not isIgnored and not isPunchTool(tool) then
+                table.insert(toolsToEat, tool)
+            end
+        end
+    end
+
+    -- Equipa, clica e consome cada um dos itens encontrados
+    for _, tool in ipairs(toolsToEat) do
+        if tool and tool.Parent == backpack then
+            tool.Parent = Character
+            task.wait(0.05)
+            tool:Activate()
+            task.wait(0.1)
+            tool.Parent = backpack
+        end
+    end
+end
+
+OutrosTab:Button({
+    Title = "Eat food",
+    Callback = function()
+        eatFood()
+    end
+})
+
 -- ──────────────────────────────────────────────────────────────────
--- 5. LOOPS E CONEXÕES DE EVENTOS (RODAM NO FINAL)
+-- 5. LOOPS E CONEXÕES DE EVENTOS
 -- ──────────────────────────────────────────────────────────────────
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
