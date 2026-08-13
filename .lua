@@ -436,7 +436,7 @@ MainTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LIS
 MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
 
 -- ABA: STATS
-local StatsTab = Window:Tab({ Title = "Stats", Icon = ​"user-check" })
+local StatsTab = Window:Tab({ Title = "Stats", Icon = "bar-chart-3" })
 local myStr = StatsTab:Button({Title = "Força: 0"})
 local myDur = StatsTab:Button({Title = "Durabilidade: 0"})
 local myAgi = StatsTab:Button({Title = "Agilidade: 0"})
@@ -593,7 +593,7 @@ for _, entry in ipairs(ROCKS) do
 end
 
 -- ABA: OUTROS
-local OutrosTab = Window:Tab({ Title = "Outros", Icon = "boxes" })
+local OutrosTab = Window:Tab({ Title = "Outros", Icon = "more-horizontal" })
 
 local function eatFood()
     local backpack = LP:FindFirstChild("Backpack")
