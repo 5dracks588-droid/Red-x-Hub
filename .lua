@@ -5,7 +5,7 @@ local Window = WindUI:CreateWindow({
     Icon = "crown",
     Author = "red",
     Folder = "MuscleLegendsConfig",
-    Size = UDim2.fromOffset(500, 350),
+    Size = UDim2.fromOffset(580,430),
     Transparent = true,
     Theme = "Crimson",
 })
