@@ -593,7 +593,7 @@ for _, entry in ipairs(ROCKS) do
 end
 
 -- ABA: OUTROS
-local OutrosTab = Window:Tab({ Title = "Outros", Icon = "more-horizontal" })
+local OutrosTab = Window:Tab({ Title = "Outros", Icon = "cpu" })
 
 local function eatFood()
     local backpack = LP:FindFirstChild("Backpack")
