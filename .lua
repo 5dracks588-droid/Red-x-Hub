@@ -25,9 +25,9 @@ pcall(function()
         bgImage.Name = "MenuWallpaper"
         bgImage.Size = UDim2.fromScale(1, 1)
         bgImage.Position = UDim2.fromScale(0, 0)
-        bgImage.Image = "rbxassetid://71388509379511" -- Cole o ID da sua imagem aqui
+        bgImage.Image = "rbxassetid://71388509379511" 
         bgImage.BackgroundTransparency = 1
-        bgImage.ImageTransparency = 0.2 -- Transparência da imagem (0 a 1)
+        bgImage.ImageTransparency = 0.2 
         bgImage.ScaleType = Enum.ScaleType.Crop
         bgImage.ZIndex = 1
         bgImage.Parent = mainFrame
@@ -49,22 +49,18 @@ Window:EditOpenButton({
 })
 
 -- ──────────────────────────────────────────────────────────────────
--- FUNÇÃO AUXILIAR DE FORMATAÇÃO DE NÚMEROS (SEPARADOR DE MILHARES)
--- Formata valores de forma legível: Ex. 838392.382 -> 838,392.382
+-- 1. FUNÇÃO AUXILIAR DE FORMATAÇÃO DE NÚMEROS
 -- ──────────────────────────────────────────────────────────────────
 local function formatNumber(val)
     if not val then return "0" end
     
-    -- Tratamento caso venha uma string com vírgula de decimal
     local str = tostring(val):gsub(",", ".")
     local num = tonumber(str)
     if not num then return tostring(val) end
 
-    -- Separa a parte inteira da decimal
     local formattedInt = tostring(math.floor(math.abs(num)))
     local decimalPart = str:match("%.(%d+)")
 
-    -- Adiciona vírgula a cada 3 dígitos
     local k
     while true do
         formattedInt, k = string.gsub(formattedInt, "^(-?%d+)(%d%d%d)", '%1,%2')
@@ -88,11 +84,12 @@ end
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local LP = Players.LocalPlayer
 local Camera = workspace.CurrentCamera
 
--- Variáveis do Personagem (Atualizadas no Setup)
+-- Variáveis do Personagem
 local Character = LP.Character or LP.CharacterAdded:Wait()
 local Humanoid = Character:WaitForChild("Humanoid")
 local HRP = Character:WaitForChild("HumanoidRootPart")
@@ -101,6 +98,12 @@ local HRP = Character:WaitForChild("HumanoidRootPart")
 local PARKED_POS = Vector3.new(10000, 1000, 10000)
 local Flags = { AutoPunch = false }
 local farmConfig = { autoWeight = false, autoSitups = false, autoPushups = false, autoHandstands = false }
+
+-- Variáveis de Rebirth e TP Muscle King
+local targetRebirths = 0
+local autoRebirthTarget = false
+local autoRebirthInfinite = false
+local autoTpMuscleKing = false
 
 local TOOL_NAME = "Punch"
 local MULTIPLICADOR_VELOCIDADE = 10
@@ -217,7 +220,7 @@ end
 
 local function getPunchTool()
     for _, name in ipairs({"Punch","PunchTool","Fist","Glove","Boxing Gloves","Punching Gloves"}) do
-        local t = LP.Backpack:FindFirstChild(name) or Character:FindFirstChild(name)
+        local t = LP.Backpack:FindFirstChild(name) or (Character and Character:FindFirstChild(name))
         if t then return t end
     end
     for _, v in ipairs(LP.Backpack:GetChildren()) do if v:IsA("Tool") then return v end end
@@ -238,6 +241,16 @@ local function unequipTool(toolName)
         if tool and tool:IsA("Tool") then tool.Parent = LP.Backpack end
     end
 end
+
+-- ==========================================
+-- FUNÇÃO ATUALIZADA DO REBIRTH
+-- ==========================================
+local function doRebirth()
+    pcall(function()
+        ReplicatedStorage.rEvents.rebirthRemote:InvokeServer("rebirthRequest")
+    end)
+end
+-- ==========================================
 
 local function StopFly()
     FlyEnabled = false
@@ -297,30 +310,40 @@ local function gerenciarAnimacaoInfinita(char)
 	end)
 end
 
-local function SetupCharacter(char)
-    Character = char
-    Humanoid = char:WaitForChild("Humanoid")
-    HRP = char:WaitForChild("HumanoidRootPart")
+-- ──────────────────────────────────────────────────────────────────
+-- SETUP DE CHARACTER (CORRIGIDO PARA RESPAWN)
+-- ──────────────────────────────────────────────────────────────────
+local function SetupCharacter(newChar)
+    Character = newChar
+    Humanoid = newChar:WaitForChild("Humanoid", 10)
+    HRP = newChar:WaitForChild("HumanoidRootPart", 10)
     isDead = false
     
-    Humanoid.Died:Connect(function()
-        isDead = true
-        StopFly()
-        pcall(function()
-            local tool = Character:FindFirstChildWhichIsA("Tool")
-            if tool then tool.Parent = LP.Backpack end
+    if Humanoid then
+        Humanoid.Died:Connect(function()
+            isDead = true
+            StopFly()
+            HRP = nil -- Remove a referência antiga para os loops não quebrarem
+            pcall(function()
+                local tool = Character:FindFirstChildWhichIsA("Tool")
+                if tool then tool.Parent = LP.Backpack end
+            end)
         end)
-    end)
+    end
     
     task.wait(0.3)
-    task.spawn(gerenciarAnimacaoInfinita, char)
+    task.spawn(gerenciarAnimacaoInfinita, newChar)
     
     if Flags.AutoPunch then
-        task.wait(0.2)
+        task.wait(0.5)
         local tool = getPunchTool()
         if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
     end
 end
+
+-- Conecta ao evento de renascimento do jogador
+LP.CharacterAdded:Connect(SetupCharacter)
+if LP.Character then task.spawn(SetupCharacter, LP.Character) end
 
 local function findRealRock(entry)
     local best, bestDist, bestScore = nil, math.huge, -1
@@ -391,6 +414,7 @@ local function createCloneForEntry(entry)
 end
 
 local function calcFrontPos(data)
+    if not HRP then return PARKED_POS end
     local rockSize = getObjSize(data.realRock)
     local halfDepth = math.clamp(math.min(rockSize.X, rockSize.Z) / 2, 0, 15)
     local flatLook = Vector3.new(HRP.CFrame.LookVector.X, 0, HRP.CFrame.LookVector.Z)
@@ -400,7 +424,7 @@ local function calcFrontPos(data)
 end
 
 local function touchRealRock(data)
-    if not data or not data.realRock then return end
+    if not data or not data.realRock or not HRP then return end
     for _, part in ipairs(getAllParts(data.realRock)) do
         pcall(function() firetouchinterest(HRP, part, 0); firetouchinterest(HRP, part, 1) end)
         pcall(function()
@@ -423,10 +447,10 @@ local function activateRock(label)
     activeRockLabel = label
     pivotCloneTo(data, calcFrontPos(data))
     lockConnection = RunService.RenderStepped:Connect(function()
-        if activeRockLabel ~= label then lockConnection:Disconnect(); return end
+        if activeRockLabel ~= label or isDead or not HRP then lockConnection:Disconnect(); return end
         pivotCloneTo(data, calcFrontPos(data))
     end)
-    task.spawn(function() while activeRockLabel == label do task.wait(0.02); touchRealRock(data) end end)
+    task.spawn(function() while activeRockLabel == label do task.wait(0.02); if not isDead then touchRealRock(data) end end end)
 end
 
 local function deactivateRock(label)
@@ -459,6 +483,7 @@ MainTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = L
 MainTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
 MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
 
+
 -- ABA: STATS
 local StatsTab = Window:Tab({ Title = "Stats", Icon = "bar-chart-3" })
 local myStr = StatsTab:Button({Title = "Força: 0"})
@@ -483,31 +508,30 @@ end)
 
 -- ABA: AUTO FARM
 local FarmTab = Window:Tab({ Title = "Auto Farm", Icon = "dumbbell" })
-local ToggleW, ToggleS, ToggleP, ToggleH, lockPos
+local lockPos
 
 ToggleW = FarmTab:Toggle({ Title = "Auto Weight", Value = false, Callback = function(Value)
-    farmConfig.autoWeight = Value
-    if Value then farmConfig.autoSitups = false; ToggleS:Set(false); farmConfig.autoPushups = false; ToggleP:Set(false); farmConfig.autoHandstands = false; ToggleH:Set(false) else unequipTool("Weight") end
+    updateWeightState(Value)
 end})
 
 ToggleS = FarmTab:Toggle({ Title = "Auto Situps", Value = false, Callback = function(Value)
     farmConfig.autoSitups = Value
-    if Value then farmConfig.autoWeight = false; ToggleW:Set(false); farmConfig.autoPushups = false; ToggleP:Set(false); farmConfig.autoHandstands = false; ToggleH:Set(false) else unequipTool("Situps") end
+    if Value then farmConfig.autoWeight = false; if ToggleW then ToggleW:Set(false) end; if ToggleW_Rebirth then ToggleW_Rebirth:Set(false) end; farmConfig.autoPushups = false; if ToggleP then ToggleP:Set(false) end; farmConfig.autoHandstands = false; if ToggleH then ToggleH:Set(false) end else unequipTool("Situps") end
 end})
 
 ToggleP = FarmTab:Toggle({ Title = "Auto Pushups", Value = false, Callback = function(Value)
     farmConfig.autoPushups = Value
-    if Value then farmConfig.autoWeight = false; ToggleW:Set(false); farmConfig.autoSitups = false; ToggleS:Set(false); farmConfig.autoHandstands = false; ToggleH:Set(false) else unequipTool("Pushups") end
+    if Value then farmConfig.autoWeight = false; if ToggleW then ToggleW:Set(false) end; if ToggleW_Rebirth then ToggleW_Rebirth:Set(false) end; farmConfig.autoSitups = false; if ToggleS then ToggleS:Set(false) end; farmConfig.autoHandstands = false; if ToggleH then ToggleH:Set(false) end else unequipTool("Pushups") end
 end})
 
 ToggleH = FarmTab:Toggle({ Title = "Auto Handstands", Value = false, Callback = function(Value)
     farmConfig.autoHandstands = Value
-    if Value then farmConfig.autoWeight = false; ToggleW:Set(false); farmConfig.autoSitups = false; ToggleS:Set(false); farmConfig.autoPushups = false; ToggleP:Set(false) else unequipTool("Handstands") end
+    if Value then farmConfig.autoWeight = false; if ToggleW then ToggleW:Set(false) end; if ToggleW_Rebirth then ToggleW_Rebirth:Set(false) end; farmConfig.autoSitups = false; if ToggleS then ToggleS:Set(false) end; farmConfig.autoPushups = false; if ToggleP then ToggleP:Set(false) end else unequipTool("Handstands") end
 end})
 
 FarmTab:Toggle({ Title = "Lock Position", Value = false, Callback = function(Value)
     if Value then
-        lockPos = HRP.CFrame
+        if HRP then lockPos = HRP.CFrame end
         task.spawn(function()
             while lockPos do
                 task.wait(0.1)
@@ -516,6 +540,65 @@ FarmTab:Toggle({ Title = "Lock Position", Value = false, Callback = function(Val
         end)
     else lockPos = nil end
 end})
+
+-- ABA: REBIRTH (NOVA ABA)
+local RebirthTab = Window:Tab({ Title = "Rebirth", Icon = "repeat" })
+
+RebirthTab:Input({
+    Title = "Rebirth Target",
+    Placeholder = "",
+    Callback = function(text)
+        local num = tonumber(text)
+        if num then targetRebirths = num end
+    end
+})
+
+RebirthTab:Toggle({
+    Title = "Auto rebirth target",
+    Value = false,
+    Callback = function(v) autoRebirthTarget = v end
+})
+
+RebirthTab:Toggle({
+    Title = "Auto Rebirth Infinite",
+    Value = false,
+    Callback = function(v) autoRebirthInfinite = v end
+})
+
+-- Variáveis para sincronizar os botões de Auto Weight
+local ToggleW, ToggleW_Rebirth, ToggleS, ToggleP, ToggleH
+local isUpdatingWeight = false
+
+local function updateWeightState(Value)
+    if isUpdatingWeight then return end
+    isUpdatingWeight = true
+    
+    farmConfig.autoWeight = Value
+    if ToggleW then pcall(function() ToggleW:Set(Value) end) end
+    if ToggleW_Rebirth then pcall(function() ToggleW_Rebirth:Set(Value) end) end
+    
+    if Value then
+        farmConfig.autoSitups = false; if ToggleS then pcall(function() ToggleS:Set(false) end) end
+        farmConfig.autoPushups = false; if ToggleP then pcall(function() ToggleP:Set(false) end) end
+        farmConfig.autoHandstands = false; if ToggleH then pcall(function() ToggleH:Set(false) end) end
+    else
+        unequipTool("Weight")
+    end
+    
+    isUpdatingWeight = false
+end
+
+ToggleW_Rebirth = RebirthTab:Toggle({
+    Title = "Auto Weight",
+    Value = false,
+    Callback = function(Value) updateWeightState(Value) end
+})
+
+RebirthTab:Toggle({
+    Title = "Auto TP Muscle King",
+    Value = false,
+    Callback = function(v) autoTpMuscleKing = v end
+})
 
 -- ABA: JOGADOR
 local PlayerTab = Window:Tab({ Title = "Jogador", Icon = "user" })
@@ -623,43 +706,27 @@ local function eatFood()
     local backpack = LP:FindFirstChild("Backpack")
     if not backpack or not Character then return end
 
-    -- Tabela de itens/habilidades de treino e combate que NÃO devem ser usados
     local ignoredItems = {
-        ["weight"] = true,
-        ["situps"] = true,
-        ["pushups"] = true,
-        ["handstands"] = true,
-        ["stomp"] = true,
-        ["ground slam"] = true,
-        ["ground punch"] = true,
-        ["slam"] = true,
-        ["groundslam"] = true,
-        ["groundpunch"] = true
+        ["weight"] = true, ["situps"] = true, ["pushups"] = true, ["handstands"] = true,
+        ["stomp"] = true, ["ground slam"] = true, ["ground punch"] = true, ["slam"] = true, 
+        ["groundslam"] = true, ["groundpunch"] = true
     }
 
     local toolsToEat = {}
 
-    -- Procura no inventário
     for _, tool in ipairs(backpack:GetChildren()) do
         if tool:IsA("Tool") then
             local toolName = tool.Name:lower()
-            
-            -- Verifica se o item está na lista de ignorados ou se é soco
             local isIgnored = false
             for key, _ in pairs(ignoredItems) do
                 if toolName:find(key, 1, true) then
-                    isIgnored = true
-                    break
+                    isIgnored = true; break
                 end
             end
-
-            if not isIgnored and not isPunchTool(tool) then
-                table.insert(toolsToEat, tool)
-            end
+            if not isIgnored and not isPunchTool(tool) then table.insert(toolsToEat, tool) end
         end
     end
 
-    -- Equipa, clica e consome cada um dos itens encontrados
     for _, tool in ipairs(toolsToEat) do
         if tool and tool.Parent == backpack then
             tool.Parent = Character
@@ -671,16 +738,39 @@ local function eatFood()
     end
 end
 
-OutrosTab:Button({
-    Title = "Eat food",
-    Callback = function()
-        eatFood()
-    end
-})
+OutrosTab:Button({ Title = "Eat food", Callback = function() eatFood() end })
 
 -- ──────────────────────────────────────────────────────────────────
 -- 5. LOOPS E CONEXÕES DE EVENTOS
 -- ──────────────────────────────────────────────────────────────────
+
+-- LOOP DO AUTO REBIRTH (TARGET & INFINITE)
+task.spawn(function()
+    while task.wait(0.1) do
+        if autoRebirthInfinite then
+            doRebirth()
+        elseif autoRebirthTarget then
+            local currentRebirths = tonumber(findValueDeep(LP, "Rebirths")) or 0
+            if currentRebirths < targetRebirths then
+                doRebirth()
+            end
+        end
+    end
+end)
+
+-- LOOP DO AUTO TP MUSCLE KING
+task.spawn(function()
+    while task.wait(0.2) do
+        if autoTpMuscleKing then
+            pcall(function()
+                if Character and HRP and Humanoid and Humanoid.Health > 0 then
+                    HRP.CFrame = CFrame.new(-8626, 17, -5731)
+                end
+            end)
+        end
+    end
+end)
+
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.W then moveVector = Vector3.new(moveVector.X, 0, -1)
@@ -695,11 +785,11 @@ UserInputService.InputEnded:Connect(function(input)
 end)
 
 UserInputService.JumpRequest:Connect(function()
-    if InfiniteJump and Character and Humanoid then Humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
+    if InfiniteJump and Character and Humanoid and Humanoid.Health > 0 then Humanoid:ChangeState(Enum.HumanoidStateType.Jumping) end
 end)
 
 RunService.RenderStepped:Connect(function()
-    if Character and Humanoid and HRP then
+    if Character and Humanoid and HRP and Humanoid.Health > 0 then
         if NoclipEnabled then for _, part in pairs(Character:GetDescendants()) do if part:IsA("BasePart") then part.CanCollide = false end end end
         if Speed ~= 16 then Humanoid.WalkSpeed = Speed end
         if Jump ~= 50 then Humanoid.JumpPower = Jump end
@@ -714,9 +804,10 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
+-- LOOP DE FARM (SEGURO CONTRA RESPAWN)
 task.spawn(function()
     while task.wait(0.1) do
-        if Character and HRP then
+        if Character and Character:FindFirstChild("HumanoidRootPart") and Humanoid and Humanoid.Health > 0 then
             if farmConfig.autoWeight then local t = LP.Backpack:FindFirstChild("Weight") or Character:FindFirstChild("Weight"); if t then if t.Parent ~= Character then t.Parent = Character end; pcall(function() LP.muscleEvent:FireServer("rep") end) end end
             if farmConfig.autoSitups then local t = LP.Backpack:FindFirstChild("Situps") or Character:FindFirstChild("Situps"); if t then if t.Parent ~= Character then t.Parent = Character end; pcall(function() LP.muscleEvent:FireServer("rep") end) end end
             if farmConfig.autoPushups then local t = LP.Backpack:FindFirstChild("Pushups") or Character:FindFirstChild("Pushups"); if t then if t.Parent ~= Character then t.Parent = Character end; pcall(function() LP.muscleEvent:FireServer("rep") end) end end
@@ -725,9 +816,10 @@ task.spawn(function()
     end
 end)
 
+-- LOOP DE AUTO SOCO
 task.spawn(function()
     while task.wait(0.1) do
-        if Flags.AutoPunch and not isDead then
+        if Flags.AutoPunch and not isDead and Character and Humanoid and Humanoid.Health > 0 then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
                 if equipped and not isPunchTool(equipped) then equipped.Parent = LP.Backpack; task.wait(0.01) end
@@ -751,7 +843,4 @@ task.spawn(function()
         task.wait()
     end
 end)
-
-LP.CharacterAdded:Connect(SetupCharacter)
-if Character then task.spawn(SetupCharacter, Character) end
 
