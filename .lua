@@ -485,7 +485,7 @@ MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LIS
 
 
 -- ABA: STATS
-local StatsTab = Window:Tab({ Title = "Stats", Icon = "bar-chart-3" })
+local StatsTab = Window:Tab({ Title = "Stats", Icon = "activity"})
 local myStr = StatsTab:Button({Title = "Força: 0"})
 local myDur = StatsTab:Button({Title = "Durabilidade: 0"})
 local myAgi = StatsTab:Button({Title = "Agilidade: 0"})
