@@ -3,7 +3,7 @@ local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footag
 local Window = WindUI:CreateWindow({
     Title = "Muscle Legends | Red x Hub",
     Icon = "crown",
-    Author = "red",
+    Author = "RED",
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580,430),
     Transparent = false,
@@ -27,7 +27,7 @@ pcall(function()
         bgImage.Position = UDim2.fromScale(0, 0)
         bgImage.Image = "rbxassetid://71388509379511" 
         bgImage.BackgroundTransparency = 1
-        bgImage.ImageTransparency = 0.2 
+        bgImage.ImageTransparency = 0
         bgImage.ScaleType = Enum.ScaleType.Crop
         bgImage.ZIndex = 1
         bgImage.Parent = mainFrame
@@ -44,7 +44,7 @@ Window:EditOpenButton({
     OnlyMobile = false, 
     Color = ColorSequence.new(
         Color3.fromRGB(255, 0, 0), 
-        Color3.fromRGB(255, 0, 0)
+        Color3.fromRGB(200, 0, 0)
     ),
 })
 
@@ -506,7 +506,35 @@ task.spawn(function()
     end
 end)
 
+-- ==========================================
+-- VARIÁVEIS E FUNÇÃO DE SINCRONIZAÇÃO 
+-- (Fica antes para as abas conseguirem ler)
+-- ==========================================
+local ToggleW, ToggleW_Rebirth, ToggleS, ToggleP, ToggleH
+local isUpdatingWeight = false
+
+local function updateWeightState(Value)
+    if isUpdatingWeight then return end
+    isUpdatingWeight = true
+    
+    farmConfig.autoWeight = Value
+    if ToggleW then pcall(function() ToggleW:Set(Value) end) end
+    if ToggleW_Rebirth then pcall(function() ToggleW_Rebirth:Set(Value) end) end
+    
+    if Value then
+        farmConfig.autoSitups = false; if ToggleS then pcall(function() ToggleS:Set(false) end) end
+        farmConfig.autoPushups = false; if ToggleP then pcall(function() ToggleP:Set(false) end) end
+        farmConfig.autoHandstands = false; if ToggleH then pcall(function() ToggleH:Set(false) end) end
+    else
+        unequipTool("Weight")
+    end
+    
+    isUpdatingWeight = false
+end
+
+-- ──────────────────────────────────────────────────────────────────
 -- ABA: AUTO FARM
+-- ──────────────────────────────────────────────────────────────────
 local FarmTab = Window:Tab({ Title = "Auto Farm", Icon = "dumbbell" })
 local lockPos
 
@@ -541,7 +569,9 @@ FarmTab:Toggle({ Title = "Lock Position", Value = false, Callback = function(Val
     else lockPos = nil end
 end})
 
+-- ──────────────────────────────────────────────────────────────────
 -- ABA: REBIRTH (NOVA ABA)
+-- ──────────────────────────────────────────────────────────────────
 local RebirthTab = Window:Tab({ Title = "Rebirth", Icon = "repeat" })
 
 RebirthTab:Input({
@@ -564,29 +594,6 @@ RebirthTab:Toggle({
     Value = false,
     Callback = function(v) autoRebirthInfinite = v end
 })
-
--- Variáveis para sincronizar os botões de Auto Weight
-local ToggleW, ToggleW_Rebirth, ToggleS, ToggleP, ToggleH
-local isUpdatingWeight = false
-
-local function updateWeightState(Value)
-    if isUpdatingWeight then return end
-    isUpdatingWeight = true
-    
-    farmConfig.autoWeight = Value
-    if ToggleW then pcall(function() ToggleW:Set(Value) end) end
-    if ToggleW_Rebirth then pcall(function() ToggleW_Rebirth:Set(Value) end) end
-    
-    if Value then
-        farmConfig.autoSitups = false; if ToggleS then pcall(function() ToggleS:Set(false) end) end
-        farmConfig.autoPushups = false; if ToggleP then pcall(function() ToggleP:Set(false) end) end
-        farmConfig.autoHandstands = false; if ToggleH then pcall(function() ToggleH:Set(false) end) end
-    else
-        unequipTool("Weight")
-    end
-    
-    isUpdatingWeight = false
-end
 
 ToggleW_Rebirth = RebirthTab:Toggle({
     Title = "Auto Weight",
@@ -699,47 +706,6 @@ for _, entry in ipairs(ROCKS) do
     })
 end
 
--- ABA: OUTROS
-local OutrosTab = Window:Tab({ Title = "Outros", Icon = "cpu" })
-
-local function eatFood()
-    local backpack = LP:FindFirstChild("Backpack")
-    if not backpack or not Character then return end
-
-    local ignoredItems = {
-        ["weight"] = true, ["situps"] = true, ["pushups"] = true, ["handstands"] = true,
-        ["stomp"] = true, ["ground slam"] = true, ["ground punch"] = true, ["slam"] = true, 
-        ["groundslam"] = true, ["groundpunch"] = true
-    }
-
-    local toolsToEat = {}
-
-    for _, tool in ipairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            local toolName = tool.Name:lower()
-            local isIgnored = false
-            for key, _ in pairs(ignoredItems) do
-                if toolName:find(key, 1, true) then
-                    isIgnored = true; break
-                end
-            end
-            if not isIgnored and not isPunchTool(tool) then table.insert(toolsToEat, tool) end
-        end
-    end
-
-    for _, tool in ipairs(toolsToEat) do
-        if tool and tool.Parent == backpack then
-            tool.Parent = Character
-            task.wait(0.05)
-            tool:Activate()
-            task.wait(0.1)
-            tool.Parent = backpack
-        end
-    end
-end
-
-OutrosTab:Button({ Title = "Eat food", Callback = function() eatFood() end })
-
 -- ──────────────────────────────────────────────────────────────────
 -- 5. LOOPS E CONEXÕES DE EVENTOS
 -- ──────────────────────────────────────────────────────────────────
@@ -843,4 +809,3 @@ task.spawn(function()
         task.wait()
     end
 end)
-
