@@ -477,12 +477,52 @@ end
 -- 4. CONSTRUÇÃO DAS ABAS (TABS DA INTERFACE)
 -- ──────────────────────────────────────────────────────────────────
 
--- ABA: MAIN
-local MainTab = Window:Tab({ Title = "Main", Icon = "house" })
-MainTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = LISTA_10M[1], Callback = function(v) end })
-MainTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
-MainTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
+-- ABA: INFO
+local InfoTab = Window:Tab({ Title = "Info", Icon = "info" })
+InfoTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = LISTA_10M[1], Callback = function(v) end })
+InfoTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
+InfoTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
 
+-- Elementos de status na ordem solicitada: Ping, Fps, Server
+local pingBtn = InfoTab:Button({ Title = "Ping: 0 ms" })
+local fpsBtn = InfoTab:Button({ Title = "FPS: 0" })
+local serverBtn = InfoTab:Button({ Title = "Server: 0s" })
+
+-- Loop de atualização do Ping, FPS e Server Uptime
+task.spawn(function()
+    local Stats = game:GetService("Stats")
+    local frameCount = 0
+    local lastTime = tick()
+    local currentFps = 60
+
+    RunService.RenderStepped:Connect(function()
+        frameCount = frameCount + 1
+        local now = tick()
+        if now - lastTime >= 1 then
+            currentFps = frameCount
+            frameCount = 0
+            lastTime = now
+        end
+    end)
+
+    while task.wait(1) do
+        pcall(function()
+            -- Ping
+            local pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            pingBtn:SetTitle("Ping: " .. pingVal .. " ms")
+
+            -- FPS
+            fpsBtn:SetTitle("FPS: " .. currentFps)
+
+            -- Server (Tempo ativo do servidor)
+            local uptime = math.floor(workspace.DistributedGameTime)
+            local hours = math.floor(uptime / 3600)
+            local mins = math.floor((uptime % 3600) / 60)
+            local secs = uptime % 60
+            serverBtn:SetTitle(string.format("Time: %02dh %02dm %02ds", hours, mins, secs))
+        end)
+    end
+end)
 
 -- ABA: STATS
 local StatsTab = Window:Tab({ Title = "Stats", Icon = "activity"})
