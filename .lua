@@ -552,7 +552,7 @@ local myKil = StatsTab:Button({Title = "Kills: 0"})
 local myReb = StatsTab:Button({Title = "Rebirths: 0"})
 
 task.spawn(function()
-    while task.wait(05) do
+    while task.wait(0.05) do
         if LP then
             pcall(function()
                 myStr:SetTitle("Força: " .. formatNumber(findValueDeep(LP, "Strength") or 0))
