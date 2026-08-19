@@ -1,9 +1,9 @@
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 
 local Window = WindUI:CreateWindow({
-    Title = "Muscle Legends | Red x Hub",
+    Title = '<font color="rgb(200, 0, 0)">Muscle Legends | Red x Hub</font>',
     Icon = "crown",
-    Author = "RED",
+    Author = '<font color="rgb(200, 0, 0)">RED</font>',
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580,430),
     Transparent = false,
@@ -666,6 +666,32 @@ RebirthTab:Toggle({
     Callback = function(v) autoTpMuscleKing = v end
 })
 
+local KillerTab = Window:Tab({ Title = "Killer", Icon = "skull" })
+
+KillerTab:Toggle({ Title = "Kill Aura", Value = false, Callback = function(v)
+    AutoKillEveryone = v
+    Flags.AutoPunch = v -- Liga/Desliga o auto soco junto com a aura
+    
+    if v then
+        -- Quando liga: puxa a luva
+        local tool = getPunchTool()
+        if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
+    else
+        -- Quando desliga: guarda a luva e para a animação
+        pcall(function()
+            local equipped = Character:FindFirstChildWhichIsA("Tool")
+            if equipped and isPunchTool(equipped) then equipped.Parent = LP.Backpack end
+            if Humanoid then
+                for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
+                    if string.find(string.lower(track.Animation.Name), "punch") or string.find(string.lower(track.Animation.AnimationId), "tool") then
+                        track:AdjustSpeed(1); track.Looped = false; track:Stop()
+                    end
+                end
+            end
+        end)
+    end
+end})
+
 -- ABA: JOGADOR
 local PlayerTab = Window:Tab({ Title = "Jogador", Icon = "user" })
 PlayerTab:Input({ Title = "Velocidade", Placeholder = "250", Callback = function(text) local num = tonumber(text); if num then Speed = num end end })
@@ -796,6 +822,32 @@ task.spawn(function()
     end
 end)
 
+-- LOOP DO KILL EVERYONE (KILL AURA REAL - SEM TELEPORTE)
+task.spawn(function()
+    while task.wait(0.05) do
+        if AutoKillEveryone and Character and Humanoid and Humanoid.Health > 0 then
+            local arm = Character:FindFirstChild("Right Arm") or Character:FindFirstChild("RightHand") or Character:FindFirstChild("RightLowerArm")
+            if arm then
+                for _, p in ipairs(Players:GetPlayers()) do
+                    if p ~= LP then
+                        local pChar = p.Character
+                        -- Verifica se o player tá vivo e tem HumanoidRootPart
+                        if pChar and pChar:FindFirstChild("HumanoidRootPart") and pChar:FindFirstChild("Humanoid") and pChar.Humanoid.Health > 0 then
+                            -- Ignora quem está na safe zone (ForceField)
+                            if not pChar:FindFirstChildOfClass("ForceField") then
+                                pcall(function()
+                                    firetouchinterest(arm, pChar.HumanoidRootPart, 0)
+                                    firetouchinterest(arm, pChar.HumanoidRootPart, 1)
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.W then moveVector = Vector3.new(moveVector.X, 0, -1)
@@ -868,4 +920,3 @@ task.spawn(function()
         task.wait()
     end
 end)
-
