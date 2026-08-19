@@ -290,6 +290,9 @@ local function StartFly()
     end)
 end
 
+-- ==========================================
+-- GERENCIADOR DE ANIMAÇÃO (AQUI ACONTECE A MÁGICA)
+-- ==========================================
 local function gerenciarAnimacaoInfinita(char)
 	local hum = char:WaitForChild("Humanoid", 5)
 	if not hum then return end
@@ -302,6 +305,21 @@ local function gerenciarAnimacaoInfinita(char)
 			if Flags.AutoPunch then
                 animationTrack.Looped = true 
                 animationTrack:AdjustSpeed(MULTIPLICADOR_VELOCIDADE)
+                
+                -- CORTADOR DE ANIMAÇÃO:
+                -- Reseta o soco antes de terminar, dando o efeito de ser super rápido e mexer pouco.
+                task.spawn(function()
+                    while animationTrack.IsPlaying and Flags.AutoPunch do
+                        task.wait()
+                        if animationTrack.Length > 0 then
+                            -- 0.2 significa que a animação corta quando atinge 20% do movimento
+                            -- Pode mudar para 0.5 se quiser que o braço vá até a metade
+                            if animationTrack.TimePosition > (animationTrack.Length * 0.2) then
+                                animationTrack.TimePosition = 0
+                            end
+                        end
+                    end
+                end)
             else
                 animationTrack.Looped = false
                 animationTrack:AdjustSpeed(1)
@@ -309,6 +327,7 @@ local function gerenciarAnimacaoInfinita(char)
 		end
 	end)
 end
+-- ==========================================
 
 -- ──────────────────────────────────────────────────────────────────
 -- SETUP DE CHARACTER (CORRIGIDO PARA RESPAWN)
@@ -533,7 +552,7 @@ local myKil = StatsTab:Button({Title = "Kills: 0"})
 local myReb = StatsTab:Button({Title = "Rebirths: 0"})
 
 task.spawn(function()
-    while task.wait(1) do
+    while task.wait(05) do
         if LP then
             pcall(function()
                 myStr:SetTitle("Força: " .. formatNumber(findValueDeep(LP, "Strength") or 0))
@@ -766,7 +785,7 @@ end)
 
 -- LOOP DO AUTO TP MUSCLE KING
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.25) do
         if autoTpMuscleKing then
             pcall(function()
                 if Character and HRP and Humanoid and Humanoid.Health > 0 then
@@ -824,7 +843,7 @@ end)
 
 -- LOOP DE AUTO SOCO
 task.spawn(function()
-    while task.wait(0.1) do
+    while task.wait(0.01) do
         if Flags.AutoPunch and not isDead and Character and Humanoid and Humanoid.Health > 0 then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
@@ -849,3 +868,4 @@ task.spawn(function()
         task.wait()
     end
 end)
+
