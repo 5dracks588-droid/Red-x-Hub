@@ -749,6 +749,55 @@ MiscTab:Button({ Title = "Atualizar Lista", Callback = function()
     updatePlayerStatsDisplay()
 end})
 
+-- ==========================================
+-- SISTEMA DE ESPECTAR JOGADOR (SPECTATE)
+-- ==========================================
+local isSpectating = false
+
+MiscTab:Toggle({ 
+    Title = "Espectar Jogador", 
+    Value = false, 
+    Callback = function(Value)
+        isSpectating = Value
+        
+        if not Value then
+            -- Quando desativar, volta a câmera para o SEU personagem
+            if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+                workspace.CurrentCamera.CameraSubject = LP.Character.Humanoid
+            end
+        else
+            -- Quando ativar, inicia um loop para manter a câmera no alvo
+            task.spawn(function()
+                while isSpectating do
+                    task.wait(0.1) -- Checa rapidinho pra não perder o alvo se ele morrer e renascer
+                    
+                    if selectedPlayerObj and selectedPlayerObj ~= "None" then
+                        local alvo = Players:FindFirstChild(selectedPlayerObj)
+                        
+                        -- Se o alvo existir e estiver vivo, gruda a câmera nele
+                        if alvo and alvo.Character then
+                            local alvoHum = alvo.Character:FindFirstChild("Humanoid")
+                            if alvoHum then
+                                workspace.CurrentCamera.CameraSubject = alvoHum
+                            end
+                        end
+                    else
+                        -- Se não tiver ninguém selecionado (None), devolve a câmera pra você
+                        if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+                            workspace.CurrentCamera.CameraSubject = LP.Character.Humanoid
+                        end
+                    end
+                end
+                
+                -- Se sair do loop por precaução, garante que a câmera volta
+                if LP.Character and LP.Character:FindFirstChild("Humanoid") then
+                    workspace.CurrentCamera.CameraSubject = LP.Character.Humanoid
+                end
+            end)
+        end
+    end 
+})
+
 -- ABA: AUTO ROCKS
 local CombateTab = Window:Tab({ Title = "Auto Rocks", Icon = "mountain" })
 CombateTab:Toggle({ Title = "Auto Soco", Value = false, Callback = function(v)
