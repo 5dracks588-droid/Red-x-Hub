@@ -895,7 +895,7 @@ end)
 
 -- LOOP DE AUTO SOCO
 task.spawn(function()
-    while task.wait(0.01) do
+    while task.wait(0.25) do
         if Flags.AutoPunch and not isDead and Character and Humanoid and Humanoid.Health > 0 then
             pcall(function()
                 local equipped = Character:FindFirstChildWhichIsA("Tool")
