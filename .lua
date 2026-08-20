@@ -798,6 +798,72 @@ MiscTab:Toggle({
     end 
 })
 
+-- ==========================================
+-- MODO LEVE / FPS BOOST (REMOVER EFEITOS)
+-- ==========================================
+local modoLeveAtivo = false
+local conexaoEfeitos = nil
+
+MiscTab:Toggle({
+    Title = "Modo Leve",
+    Value = false,
+    Callback = function(Value)
+        modoLeveAtivo = Value
+        local Lighting = game:GetService("Lighting")
+        
+        if Value then
+            -- 1. Desativa Sombras, Névoa e Efeitos Ambientais (Saturação, Bloom, Blur)
+            pcall(function()
+                Lighting.GlobalShadows = false
+                Lighting.FogEnd = 9e9
+                
+                for _, effect in ipairs(Lighting:GetChildren()) do
+                    if effect:IsA("PostEffect") or effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
+                        effect.Enabled = false
+                    end
+                end
+            end)
+
+            -- 2. Função para remover brilho (Neon), partículas e texturas
+            local function otimizarObjeto(obj)
+                if obj:IsA("ParticleEmitter") or obj:IsA("Sparkles") or obj:IsA("Smoke") or obj:IsA("Fire") then
+                    obj.Enabled = false
+                elseif obj:IsA("Decal") or obj:IsA("Texture") then
+                    obj.Transparency = 1
+                elseif obj:IsA("BasePart") then
+                    obj.CastShadow = false
+                    -- Remove o brilho excessivo dos blocos de Neon
+                    if obj.Material == Enum.Material.Neon then
+                        obj.Material = Enum.Material.SmoothPlastic
+                    end
+                end
+            end
+
+            -- Aplica a otimização em todos os blocos e efeitos do mapa
+            for _, obj in ipairs(workspace:GetDescendants()) do
+                pcall(otimizarObjeto, obj)
+            end
+
+            -- Monitora caso o jogo crie novos efeitos durante a partida
+            conexaoEfeitos = workspace.DescendantAdded:Connect(function(obj)
+                if modoLeveAtivo then
+                    pcall(otimizarObjeto, obj)
+                end
+            end)
+        else
+            -- Desconecta o monitoramento se desligar a opção
+            if conexaoEfeitos then
+                conexaoEfeitos:Disconnect()
+                conexaoEfeitos = nil
+            end
+            
+            pcall(function()
+                Lighting.GlobalShadows = true
+            end)
+        end
+    end
+})
+
 -- ABA: AUTO ROCKS
 local CombateTab = Window:Tab({ Title = "Auto Rocks", Icon = "mountain" })
 CombateTab:Toggle({ Title = "Auto Soco", Value = false, Callback = function(v)
