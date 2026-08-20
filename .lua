@@ -937,26 +937,54 @@ task.spawn(function()
     end
 end)
 
--- LOOP DO KILL EVERYONE (KILL AURA REAL - SEM TELEPORTE)
+-- LOOP DO KILL EVERYONE (KILL AURA COM ROTAÇÃO DE 200MS)
 task.spawn(function()
+    local targetIndex = 1
+    
     while task.wait(0.05) do
         if AutoKillEveryone and Character and Humanoid and Humanoid.Health > 0 then
             local arm = Character:FindFirstChild("Right Arm") or Character:FindFirstChild("RightHand") or Character:FindFirstChild("RightLowerArm")
+            
             if arm then
+                -- Coleta os alvos válidos vivos e fora de Safe Zone
+                local validTargets = {}
                 for _, p in ipairs(Players:GetPlayers()) do
                     if p ~= LP then
                         local pChar = p.Character
-                        -- Verifica se o player tá vivo e tem HumanoidRootPart
                         if pChar and pChar:FindFirstChild("HumanoidRootPart") and pChar:FindFirstChild("Humanoid") and pChar.Humanoid.Health > 0 then
-                            -- Ignora quem está na safe zone (ForceField)
                             if not pChar:FindFirstChildOfClass("ForceField") then
-                                pcall(function()
-                                    firetouchinterest(arm, pChar.HumanoidRootPart, 0)
-                                    firetouchinterest(arm, pChar.HumanoidRootPart, 1)
-                                end)
+                                table.insert(validTargets, p)
                             end
                         end
                     end
+                end
+
+                if #validTargets > 0 then
+                    -- Garante que o índice não fique fora dos limites da lista
+                    if targetIndex > #validTargets then 
+                        targetIndex = 1 
+                    end
+                    
+                    local currentTarget = validTargets[targetIndex]
+                    if currentTarget and currentTarget.Character then
+                        local targetRoot = currentTarget.Character:FindFirstChild("HumanoidRootPart")
+                        local targetHum = currentTarget.Character:FindFirstChild("Humanoid")
+                        
+                        if targetRoot and targetHum and targetHum.Health > 0 then
+                            -- Foca os ataques apenas neste jogador durante 200 milésimos (0.2s)
+                            local startTime = tick()
+                            while (tick() - startTime) < 0.2 and AutoKillEveryone and Character and Humanoid and Humanoid.Health > 0 and targetHum.Health > 0 do
+                                pcall(function()
+                                    firetouchinterest(arm, targetRoot, 0)
+                                    firetouchinterest(arm, targetRoot, 1)
+                                end)
+                                task.wait(0.02)
+                            end
+                        end
+                    end
+                    
+                    -- Rotaciona para o próximo alvo da fila
+                    targetIndex = targetIndex + 1
                 end
             end
         end
