@@ -932,14 +932,30 @@ task.spawn(function()
     end
 end)
 
--- LOOP DE AUTO SOCO
+-- SUBSTITUA PELO SEU LOOP DE AUTO SOCO ATUAL
 task.spawn(function()
-    while task.wait(0.1) do
-        if Flags.AutoPunch and not isDead and Character and Humanoid and Humanoid.Health > 0 then
-            pcall(function()
-                LP.muscleEvent:FireServer("punch", "RightHand")
-                LP.muscleEvent:FireServer("punch", "LeftHand")
-            end)
+    while task.wait(0.05) do -- 50 milissegundos
+        if Flags.AutoPunch and Character and Humanoid and Humanoid.Health > 0 then
+            local punchTool = getPunchTool()
+            if punchTool then
+                local equipped = Character:FindFirstChildWhichIsA("Tool")
+                
+                -- Se tiver algo equipado e não for o soco, desequipa
+                if equipped and equipped ~= punchTool then
+                    equipped.Parent = LP.Backpack
+                end
+                
+                -- Se o soco não estiver equipado, equipa
+                if punchTool.Parent ~= Character then
+                    punchTool.Parent = Character
+                end
+                
+                -- Executa o soco
+                pcall(function()
+                    LP.muscleEvent:FireServer("punch", "RightHand")
+                    LP.muscleEvent:FireServer("punch", "LeftHand")
+                end)
+            end
         end
     end
 end)
