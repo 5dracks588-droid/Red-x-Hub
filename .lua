@@ -105,9 +105,6 @@ local autoRebirthTarget = false
 local autoRebirthInfinite = false
 local autoTpMuscleKing = false
 
-local TOOL_NAME = "Punch"
-local MULTIPLICADOR_VELOCIDADE = 10
-
 -- Controles Internos
 local activeRockLabel = nil
 local lockConnection = nil
@@ -242,21 +239,17 @@ local function unequipTool(toolName)
     end
 end
 
--- ==========================================
--- FUNÇÃO ATUALIZADA DO REBIRTH
--- ==========================================
 local function doRebirth()
     pcall(function()
         ReplicatedStorage.rEvents.rebirthRemote:InvokeServer("rebirthRequest")
     end)
 end
--- ==========================================
 
 local function StopFly()
     FlyEnabled = false
     if Humanoid then Humanoid.PlatformStand = false end
     if flyConnection then flyConnection:Disconnect(); flyConnection = nil end
-    if bodyVelocity then bodyVelocity:Destroy(); bodyVelocity = nil end
+    if bodyVelocity then bodyVelocity:Destroy(); bodyGyro = nil end
     if bodyGyro then bodyGyro:Destroy(); bodyGyro = nil end
 end
 
@@ -290,47 +283,8 @@ local function StartFly()
     end)
 end
 
--- ==========================================
--- GERENCIADOR DE ANIMAÇÃO (AQUI ACONTECE A MÁGICA)
--- ==========================================
-local function gerenciarAnimacaoInfinita(char)
-	local hum = char:WaitForChild("Humanoid", 5)
-	if not hum then return end
-
-	hum.AnimationPlayed:Connect(function(animationTrack)
-		local animName = string.lower(animationTrack.Animation.Name)
-		local animId = animationTrack.Animation.AnimationId
-
-		if string.find(animName, "punch") or string.find(animName, "attack") or string.find(animId, "tool") then
-			if Flags.AutoPunch then
-                animationTrack.Looped = true 
-                animationTrack:AdjustSpeed(MULTIPLICADOR_VELOCIDADE)
-                
-                -- CORTADOR DE ANIMAÇÃO:
-                -- Reseta o soco antes de terminar, dando o efeito de ser super rápido e mexer pouco.
-                task.spawn(function()
-                    while animationTrack.IsPlaying and Flags.AutoPunch do
-                        task.wait()
-                        if animationTrack.Length > 0 then
-                            -- 0.2 significa que a animação corta quando atinge 20% do movimento
-                            -- Pode mudar para 0.5 se quiser que o braço vá até a metade
-                            if animationTrack.TimePosition > (animationTrack.Length * 0.2) then
-                                animationTrack.TimePosition = 0
-                            end
-                        end
-                    end
-                end)
-            else
-                animationTrack.Looped = false
-                animationTrack:AdjustSpeed(1)
-            end
-		end
-	end)
-end
--- ==========================================
-
 -- ──────────────────────────────────────────────────────────────────
--- SETUP DE CHARACTER (CORRIGIDO PARA RESPAWN)
+-- SETUP DE CHARACTER
 -- ──────────────────────────────────────────────────────────────────
 local function SetupCharacter(newChar)
     Character = newChar
@@ -342,7 +296,7 @@ local function SetupCharacter(newChar)
         Humanoid.Died:Connect(function()
             isDead = true
             StopFly()
-            HRP = nil -- Remove a referência antiga para os loops não quebrarem
+            HRP = nil
             pcall(function()
                 local tool = Character:FindFirstChildWhichIsA("Tool")
                 if tool then tool.Parent = LP.Backpack end
@@ -350,17 +304,13 @@ local function SetupCharacter(newChar)
         end)
     end
     
-    task.wait(0.3)
-    task.spawn(gerenciarAnimacaoInfinita, newChar)
-    
     if Flags.AutoPunch then
-        task.wait(0.5)
+        task.wait(0.05)
         local tool = getPunchTool()
         if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
     end
 end
 
--- Conecta ao evento de renascimento do jogador
 LP.CharacterAdded:Connect(SetupCharacter)
 if LP.Character then task.spawn(SetupCharacter, LP.Character) end
 
@@ -502,12 +452,10 @@ InfoTab:Dropdown({ Title = "Lista de Rebirth 10M", Values = LISTA_10M, Value = L
 InfoTab:Dropdown({ Title = "Lista de Rebirth 5M", Values = LISTA_5M, Value = LISTA_5M[1], Callback = function(v) end })
 InfoTab:Dropdown({ Title = "Lista de Rebirth 1M", Values = LISTA_1M, Value = LISTA_1M[1], Callback = function(v) end })
 
--- Elementos de status na ordem solicitada: Ping, Fps, Server
 local pingBtn = InfoTab:Button({ Title = "Ping: 0 ms" })
 local fpsBtn = InfoTab:Button({ Title = "FPS: 0" })
 local serverBtn = InfoTab:Button({ Title = "Server: 0s" })
 
--- Loop de atualização do Ping, FPS e Server Uptime
 task.spawn(function()
     local Stats = game:GetService("Stats")
     local frameCount = 0
@@ -526,14 +474,10 @@ task.spawn(function()
 
     while task.wait(1) do
         pcall(function()
-            -- Ping
             local pingVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
             pingBtn:SetTitle("Ping: " .. pingVal .. " ms")
-
-            -- FPS
             fpsBtn:SetTitle("FPS: " .. currentFps)
 
-            -- Server (Tempo ativo do servidor)
             local uptime = math.floor(workspace.DistributedGameTime)
             local hours = math.floor(uptime / 3600)
             local mins = math.floor((uptime % 3600) / 60)
@@ -565,10 +509,7 @@ task.spawn(function()
     end
 end)
 
--- ==========================================
--- VARIÁVEIS E FUNÇÃO DE SINCRONIZAÇÃO 
--- (Fica antes para as abas conseguirem ler)
--- ==========================================
+-- CONTROLADORES DE SINCRONIZAÇÃO
 local ToggleW, ToggleW_Rebirth, ToggleS, ToggleP, ToggleH
 local isUpdatingWeight = false
 
@@ -591,9 +532,7 @@ local function updateWeightState(Value)
     isUpdatingWeight = false
 end
 
--- ──────────────────────────────────────────────────────────────────
 -- ABA: AUTO FARM
--- ──────────────────────────────────────────────────────────────────
 local FarmTab = Window:Tab({ Title = "Auto Farm", Icon = "dumbbell" })
 local lockPos
 
@@ -628,9 +567,7 @@ FarmTab:Toggle({ Title = "Lock Position", Value = false, Callback = function(Val
     else lockPos = nil end
 end})
 
--- ──────────────────────────────────────────────────────────────────
--- ABA: REBIRTH (NOVA ABA)
--- ──────────────────────────────────────────────────────────────────
+-- ABA: REBIRTH
 local RebirthTab = Window:Tab({ Title = "Rebirth", Icon = "repeat" })
 
 RebirthTab:Input({
@@ -670,24 +607,15 @@ local KillerTab = Window:Tab({ Title = "Killer", Icon = "skull" })
 
 KillerTab:Toggle({ Title = "Kill Aura", Value = false, Callback = function(v)
     AutoKillEveryone = v
-    Flags.AutoPunch = v -- Liga/Desliga o auto soco junto com a aura
+    Flags.AutoPunch = v
     
     if v then
-        -- Quando liga: puxa a luva
         local tool = getPunchTool()
         if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
     else
-        -- Quando desliga: guarda a luva e para a animação
         pcall(function()
             local equipped = Character:FindFirstChildWhichIsA("Tool")
             if equipped and isPunchTool(equipped) then equipped.Parent = LP.Backpack end
-            if Humanoid then
-                for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
-                    if string.find(string.lower(track.Animation.Name), "punch") or string.find(string.lower(track.Animation.AnimationId), "tool") then
-                        track:AdjustSpeed(1); track.Looped = false; track:Stop()
-                    end
-                end
-            end
         end)
     end
 end})
@@ -749,9 +677,7 @@ MiscTab:Button({ Title = "Atualizar Lista", Callback = function()
     updatePlayerStatsDisplay()
 end})
 
--- ==========================================
--- SISTEMA DE ESPECTAR JOGADOR (SPECTATE)
--- ==========================================
+-- ESPECTAR JOGADOR
 local isSpectating = false
 
 MiscTab:Toggle({ 
@@ -761,20 +687,16 @@ MiscTab:Toggle({
         isSpectating = Value
         
         if not Value then
-            -- Quando desativar, volta a câmera para o SEU personagem
             if LP.Character and LP.Character:FindFirstChild("Humanoid") then
                 workspace.CurrentCamera.CameraSubject = LP.Character.Humanoid
             end
         else
-            -- Quando ativar, inicia um loop para manter a câmera no alvo
             task.spawn(function()
                 while isSpectating do
-                    task.wait(0.1) -- Checa rapidinho pra não perder o alvo se ele morrer e renascer
+                    task.wait(0.1)
                     
                     if selectedPlayerObj and selectedPlayerObj ~= "None" then
                         local alvo = Players:FindFirstChild(selectedPlayerObj)
-                        
-                        -- Se o alvo existir e estiver vivo, gruda a câmera nele
                         if alvo and alvo.Character then
                             local alvoHum = alvo.Character:FindFirstChild("Humanoid")
                             if alvoHum then
@@ -782,14 +704,12 @@ MiscTab:Toggle({
                             end
                         end
                     else
-                        -- Se não tiver ninguém selecionado (None), devolve a câmera pra você
                         if LP.Character and LP.Character:FindFirstChild("Humanoid") then
                             workspace.CurrentCamera.CameraSubject = LP.Character.Humanoid
                         end
                     end
                 end
                 
-                -- Se sair do loop por precaução, garante que a câmera volta
                 if LP.Character and LP.Character:FindFirstChild("Humanoid") then
                     workspace.CurrentCamera.CameraSubject = LP.Character.Humanoid
                 end
@@ -798,9 +718,7 @@ MiscTab:Toggle({
     end 
 })
 
--- ==========================================
--- MODO LEVE / FPS BOOST (REMOVER EFEITOS)
--- ==========================================
+-- MODO LEVE / FPS BOOST
 local modoLeveAtivo = false
 local conexaoEfeitos = nil
 
@@ -812,7 +730,6 @@ MiscTab:Toggle({
         local Lighting = game:GetService("Lighting")
         
         if Value then
-            -- 1. Desativa Sombras, Névoa e Efeitos Ambientais (Saturação, Bloom, Blur)
             pcall(function()
                 Lighting.GlobalShadows = false
                 Lighting.FogEnd = 9e9
@@ -824,7 +741,6 @@ MiscTab:Toggle({
                 end
             end)
 
-            -- 2. Função para remover brilho (Neon), partículas e texturas
             local function otimizarObjeto(obj)
                 if obj:IsA("ParticleEmitter") or obj:IsA("Sparkles") or obj:IsA("Smoke") or obj:IsA("Fire") then
                     obj.Enabled = false
@@ -832,26 +748,22 @@ MiscTab:Toggle({
                     obj.Transparency = 1
                 elseif obj:IsA("BasePart") then
                     obj.CastShadow = false
-                    -- Remove o brilho excessivo dos blocos de Neon
                     if obj.Material == Enum.Material.Neon then
                         obj.Material = Enum.Material.SmoothPlastic
                     end
                 end
             end
 
-            -- Aplica a otimização em todos os blocos e efeitos do mapa
             for _, obj in ipairs(workspace:GetDescendants()) do
                 pcall(otimizarObjeto, obj)
             end
 
-            -- Monitora caso o jogo crie novos efeitos durante a partida
             conexaoEfeitos = workspace.DescendantAdded:Connect(function(obj)
                 if modoLeveAtivo then
                     pcall(otimizarObjeto, obj)
                 end
             end)
         else
-            -- Desconecta o monitoramento se desligar a opção
             if conexaoEfeitos then
                 conexaoEfeitos:Disconnect()
                 conexaoEfeitos = nil
@@ -869,24 +781,12 @@ local CombateTab = Window:Tab({ Title = "Auto Rocks", Icon = "mountain" })
 CombateTab:Toggle({ Title = "Auto Soco", Value = false, Callback = function(v)
     Flags.AutoPunch = v
     if v then
-        pcall(function()
-            local equipped = Character:FindFirstChildWhichIsA("Tool")
-            if equipped and not isPunchTool(equipped) then equipped.Parent = LP.Backpack end
-        end)
-        task.wait(0.05)
         local tool = getPunchTool()
         if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
     else
         pcall(function()
             local equipped = Character:FindFirstChildWhichIsA("Tool")
             if equipped and isPunchTool(equipped) then equipped.Parent = LP.Backpack end
-            if Humanoid then
-                for _, track in ipairs(Humanoid:GetPlayingAnimationTracks()) do
-                    if string.find(string.lower(track.Animation.Name), "punch") or string.find(string.lower(track.Animation.AnimationId), "tool") then
-                        track:AdjustSpeed(1); track.Looped = false; track:Stop()
-                    end
-                end
-            end
         end)
     end
 end})
@@ -910,7 +810,7 @@ end
 -- 5. LOOPS E CONEXÕES DE EVENTOS
 -- ──────────────────────────────────────────────────────────────────
 
--- LOOP DO AUTO REBIRTH (TARGET & INFINITE)
+-- LOOP DO AUTO REBIRTH
 task.spawn(function()
     while task.wait(0.1) do
         if autoRebirthInfinite then
@@ -937,7 +837,7 @@ task.spawn(function()
     end
 end)
 
--- LOOP DO KILL EVERYONE (KILL AURA COM ROTAÇÃO DE 200MS)
+-- LOOP DO KILL EVERYONE
 task.spawn(function()
     local targetIndex = 1
     
@@ -946,7 +846,6 @@ task.spawn(function()
             local arm = Character:FindFirstChild("Right Arm") or Character:FindFirstChild("RightHand") or Character:FindFirstChild("RightLowerArm")
             
             if arm then
-                -- Coleta os alvos válidos vivos e fora de Safe Zone
                 local validTargets = {}
                 for _, p in ipairs(Players:GetPlayers()) do
                     if p ~= LP then
@@ -960,7 +859,6 @@ task.spawn(function()
                 end
 
                 if #validTargets > 0 then
-                    -- Garante que o índice não fique fora dos limites da lista
                     if targetIndex > #validTargets then 
                         targetIndex = 1 
                     end
@@ -971,7 +869,6 @@ task.spawn(function()
                         local targetHum = currentTarget.Character:FindFirstChild("Humanoid")
                         
                         if targetRoot and targetHum and targetHum.Health > 0 then
-                            -- Foca os ataques apenas neste jogador durante 200 milésimos (0.2s)
                             local startTime = tick()
                             while (tick() - startTime) < 0.2 and AutoKillEveryone and Character and Humanoid and Humanoid.Health > 0 and targetHum.Health > 0 do
                                 pcall(function()
@@ -983,7 +880,6 @@ task.spawn(function()
                         end
                     end
                     
-                    -- Rotaciona para o próximo alvo da fila
                     targetIndex = targetIndex + 1
                 end
             end
@@ -1024,7 +920,7 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
--- LOOP DE FARM (SEGURO CONTRA RESPAWN)
+-- LOOP DE FARM (PESTOS / EXERCÍCIOS)
 task.spawn(function()
     while task.wait(0.1) do
         if Character and Character:FindFirstChild("HumanoidRootPart") and Humanoid and Humanoid.Health > 0 then
@@ -1038,17 +934,11 @@ end)
 
 -- LOOP DE AUTO SOCO
 task.spawn(function()
-    while task.wait(0.2) do
+    while task.wait(0.1) do
         if Flags.AutoPunch and not isDead and Character and Humanoid and Humanoid.Health > 0 then
             pcall(function()
-                local equipped = Character:FindFirstChildWhichIsA("Tool")
-                if equipped and not isPunchTool(equipped) then equipped.Parent = LP.Backpack; task.wait(0.01) end
-                local tool = getPunchTool()
-                if tool then
-                    if tool.Parent == LP.Backpack then tool.Parent = Character; task.wait(0.01) end
-                    task.spawn(function() tool:Activate() end)
-                    task.spawn(function() tool:Activate() end)
-                end
+                LP.muscleEvent:FireServer("punch", "RightHand")
+                LP.muscleEvent:FireServer("punch", "LeftHand")
             end)
         end
     end
@@ -1063,3 +953,4 @@ task.spawn(function()
         task.wait()
     end
 end)
+
