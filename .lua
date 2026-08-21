@@ -776,6 +776,28 @@ MiscTab:Toggle({
     end
 })
 
+-- Adicionar isso na sessão da MiscTab
+local BlackScreenGui = Instance.new("ScreenGui")
+BlackScreenGui.Name = "BlackScreenGui"
+BlackScreenGui.IgnoreGuiInset = true
+BlackScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+BlackScreenGui.Enabled = false
+BlackScreenGui.Parent = LP:WaitForChild("PlayerGui")
+
+local BlackFrame = Instance.new("Frame")
+BlackFrame.Size = UDim2.new(1, 0, 1, 0)
+BlackFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+BlackFrame.BorderSizePixel = 0
+BlackFrame.Parent = BlackScreenGui
+
+MiscTab:Toggle({
+    Title = "Black Screen",
+    Value = false,
+    Callback = function(Value)
+        BlackScreenGui.Enabled = Value
+    end
+})
+
 -- ABA: AUTO ROCKS
 local CombateTab = Window:Tab({ Title = "Auto Rocks", Icon = "mountain" })
 CombateTab:Toggle({ Title = "Auto Soco", Value = false, Callback = function(v)
