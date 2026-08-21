@@ -1,9 +1,9 @@
 local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footagesus/WindUI/main/dist/main.lua"))()
 
 local Window = WindUI:CreateWindow({
-    Title = '<font color="rgb(200, 0, 0)">Muscle Legends | Red x Hub</font>',
+    Title = "Muscle Legends | Red x Hub", 
     Icon = "crown",
-    Author = '<font color="rgb(200, 0, 0)">RED</font>',
+    Author = "ʀᴇᴅ", 
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580,430),
     Transparent = false,
@@ -44,7 +44,7 @@ Window:EditOpenButton({
     OnlyMobile = false, 
     Color = ColorSequence.new(
         Color3.fromRGB(255, 0, 0), 
-        Color3.fromRGB(200, 0, 0)
+        Color3.fromRGB(255, 0, 0)
     ),
 })
 
@@ -605,11 +605,27 @@ RebirthTab:Toggle({
 
 local KillerTab = Window:Tab({ Title = "Killer", Icon = "skull" })
 
-KillerTab:Toggle({ Title = "Kill Aura", Value = false, Callback = function(v)
-    AutoKillEveryone = v
-    Flags.AutoPunch = v
+-- Variáveis de controle
+local AutoKillAll = false
+local AutoKillAura = false
+local WhitelistSelected = {}
+local BlacklistSelected = {}
+
+-- Função para listar os jogadores com "None" na primeira posição
+local function GetKillerPlayerNames()
+    local names = {"None"}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP then table.insert(names, p.Name) end
+    end
+    return names
+end
+
+-- 1. Função Kill All (no topo)
+KillerTab:Toggle({ Title = "Kill all", Value = false, Callback = function(v)
+    AutoKillAll = v
+    Flags.AutoPunch = v or AutoKillAura
     
-    if v then
+    if v or AutoKillAura then
         local tool = getPunchTool()
         if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
     else
@@ -619,6 +635,53 @@ KillerTab:Toggle({ Title = "Kill Aura", Value = false, Callback = function(v)
         end)
     end
 end})
+
+-- 2. Lista Branca (Whitelist)
+local WhitelistDrop = KillerTab:Dropdown({
+    Title = "Whitelist",
+    Multi = true,
+    Values = GetKillerPlayerNames(),
+    Value = {"None"},
+    Callback = function(v)
+        WhitelistSelected = v
+    end
+})
+
+-- 3. Lista Negra (Blacklist)
+local BlacklistDrop = KillerTab:Dropdown({
+    Title = "Blacklist",
+    Multi = true,
+    Values = GetKillerPlayerNames(),
+    Value = {"None"},
+    Callback = function(v)
+        BlacklistSelected = v
+    end
+})
+
+-- 4. Kill Aura (depois das duas listas)
+KillerTab:Toggle({ Title = "Kill Aura", Value = false, Callback = function(v)
+    AutoKillAura = v
+    Flags.AutoPunch = v or AutoKillAll
+    
+    if v or AutoKillAll then
+        local tool = getPunchTool()
+        if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
+    else
+        pcall(function()
+            local equipped = Character:FindFirstChildWhichIsA("Tool")
+            if equipped and isPunchTool(equipped) then equipped.Parent = LP.Backpack end
+        end)
+    end
+end})
+
+KillerTab:Button({
+    Title = "Atualizar Jogadores",
+    Callback = function()
+        local names = GetKillerPlayerNames()
+        WhitelistDrop:Refresh(names)
+        BlacklistDrop:Refresh(names)
+    end
+})
 
 -- ABA: JOGADOR
 local PlayerTab = Window:Tab({ Title = "Jogador", Icon = "user" })
@@ -859,18 +922,57 @@ task.spawn(function()
     end
 end)
 
--- LOOP DO KILL EVERYONE
+-- LOOP DE ATAQUE (KILL ALL & KILL AURA)
 task.spawn(function()
     local targetIndex = 1
     
+    local function inList(list, name)
+        if name == "None" then return false end
+        if type(list) == "table" then
+            for k, v in pairs(list) do
+                if (type(k) == "number" and v == name) or (k == name and v == true) then
+                    return true
+                end
+            end
+        elseif type(list) == "string" and list == name then
+            return true
+        end
+        return false
+    end
+
+    local function isListActive(list)
+        if type(list) == "table" then
+            for k, v in pairs(list) do
+                local name = (type(k) == "number" and v) or k
+                if name ~= "None" and (type(k) == "number" or v == true) then
+                    return true
+                end
+            end
+        end
+        return false
+    end
+    
     while task.wait(0.05) do
-        if AutoKillEveryone and Character and Humanoid and Humanoid.Health > 0 then
+        local isAttackActive = AutoKillAll or AutoKillAura
+        
+        if isAttackActive and Character and Humanoid and Humanoid.Health > 0 then
             local arm = Character:FindFirstChild("Right Arm") or Character:FindFirstChild("RightHand") or Character:FindFirstChild("RightLowerArm")
             
             if arm then
                 local validTargets = {}
+                local whitelistActive = isListActive(WhitelistSelected)
+                
                 for _, p in ipairs(Players:GetPlayers()) do
                     if p ~= LP then
+                        local onBlacklist = inList(BlacklistSelected, p.Name)
+                        local onWhitelist = inList(WhitelistSelected, p.Name)
+
+                        -- Blacklist sempre ignora o alvo
+                        if onBlacklist then continue end 
+                        
+                        -- Se for Kill Aura (sem Kill All), respeita a Whitelist caso esteja ativa
+                        if not AutoKillAll and whitelistActive and not onWhitelist then continue end
+
                         local pChar = p.Character
                         if pChar and pChar:FindFirstChild("HumanoidRootPart") and pChar:FindFirstChild("Humanoid") and pChar.Humanoid.Health > 0 then
                             if not pChar:FindFirstChildOfClass("ForceField") then
@@ -892,7 +994,7 @@ task.spawn(function()
                         
                         if targetRoot and targetHum and targetHum.Health > 0 then
                             local startTime = tick()
-                            while (tick() - startTime) < 0.2 and AutoKillEveryone and Character and Humanoid and Humanoid.Health > 0 and targetHum.Health > 0 do
+                            while (tick() - startTime) < 0.2 and (AutoKillAll or AutoKillAura) and Character and Humanoid and Humanoid.Health > 0 and targetHum.Health > 0 do
                                 pcall(function()
                                     firetouchinterest(arm, targetRoot, 0)
                                     firetouchinterest(arm, targetRoot, 1)
@@ -991,4 +1093,3 @@ task.spawn(function()
         task.wait()
     end
 end)
-
