@@ -153,6 +153,7 @@ local LISTA_10M = {
 }
 
 local ROCKS = {
+    { label = "Industrial Jungle Rock 25M", useCoord = true, targetPos = Vector3.new(-4487, 106, 5437), names = {"Industrial Jungle Rock","IndustrialJungleRock","Industrial Rock"}, durability = "25M", minSize = 6 },
     { label = "Ancient Jungle Rock 10M", useCoord = false, names = {"Ancient Jungle Rock","AncientJungleRock","Jungle Rock","JungleRock","Rocha da Selva Antiga","Ancient Rock"}, durability = "10M", minSize = 6 },
     { label = "Muscle King Mountain 5M", useCoord = false, names = {"Muscle King Mountain","MuscleKingMountain","Muscle King Rock","MuscleKingRock","King Mountain"}, durability = "5M", minSize = 6 },
     { label = "Stone of Legends 1M", useCoord = true, targetPos = Vector3.new(4147.9, 1006.4, -4106.0), names = {"Stone of Legends","StoneOfLegends","Stone Of Legends","Rock","Stone","Boulder"}, durability = "1M", minSize = 1 },
@@ -696,6 +697,7 @@ PlayerTab:Slider({ Title = "Fly Speed", Step = 5, Value = { Min = 10, Max = 500,
 local TeleportTab = Window:Tab({ Title = "Teleports", Icon = "map-pin" })
 local function teleportTo(pos) pcall(function() if Character and HRP then HRP.CFrame = CFrame.new(pos) end end) end
 TeleportTab:Button({Title = "Starting Island", Callback = function() teleportTo(Vector3.new(151, 50, 294)) end})
+TeleportTab:Button({Title = "Industrial Gym", Callback = function() teleportTo(Vector3.new(-5564, 120, 4942)) end})
 TeleportTab:Button({Title = "Jungle Island", Callback = function() teleportTo(Vector3.new(-8686, 153, 2392)) end})
 TeleportTab:Button({Title = "Muscle King Island", Callback = function() teleportTo(Vector3.new(-8626, 115, -5731)) end})
 TeleportTab:Button({Title = "Legends Island", Callback = function() teleportTo(Vector3.new(4602, 1009, -3898)) end})
