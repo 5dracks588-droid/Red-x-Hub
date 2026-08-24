@@ -248,10 +248,41 @@ end
 
 local function StopFly()
     FlyEnabled = false
-    if Humanoid then Humanoid.PlatformStand = false end
-    if flyConnection then flyConnection:Disconnect(); flyConnection = nil end
-    if bodyVelocity then bodyVelocity:Destroy(); bodyGyro = nil end
-    if bodyGyro then bodyGyro:Destroy(); bodyGyro = nil end
+    
+    if Humanoid then 
+        Humanoid.PlatformStand = false 
+        -- Força o personagem a sair de estados bugados
+        Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end
+    
+    if flyConnection then 
+        flyConnection:Disconnect()
+        flyConnection = nil 
+    end
+    
+    if bodyVelocity then 
+        bodyVelocity:Destroy()
+        bodyVelocity = nil -- Aqui estava bodyGyro = nil no seu script original
+    end
+    
+    if bodyGyro then 
+        bodyGyro:Destroy()
+        bodyGyro = nil 
+    end
+
+    -- ALINHA O PERSONAGEM PARA ELE NÃO FICAR TORTO
+    if HRP then
+        -- Salva a posição atual e pega apenas a rotação do eixo Y (para onde ele está olhando)
+        local currentPos = HRP.Position
+        local _, y, _ = HRP.CFrame:ToEulerAnglesYXZ()
+        
+        -- Aplica a posição e reseta as inclinações (X e Z ficam 0)
+        HRP.CFrame = CFrame.new(currentPos) * CFrame.Angles(0, y, 0)
+        
+        -- Zera qualquer inércia/velocidade acumulada para ele não tropeçar e cair
+        HRP.AssemblyLinearVelocity = Vector3.zero
+        HRP.AssemblyAngularVelocity = Vector3.zero
+    end
 end
 
 local function StartFly()
