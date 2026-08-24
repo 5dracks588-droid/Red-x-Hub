@@ -622,11 +622,11 @@ local function GetKillerPlayerNames()
 end
 
 -- 1. Função Kill All (no topo)
-KillerTab:Toggle({ Title = "Kill all", Value = false, Callback = function(v)
-    AutoKillAll = v
-    Flags.AutoPunch = v or AutoKillAura
+KillerTab:Toggle({ Title = "Kill Aura", Value = false, Callback = function(v)
+    AutoKillAura = v
+    Flags.AutoPunch = v or AutoKillAll
     
-    if v or AutoKillAura then
+    if v or AutoKillAll then
         local tool = getPunchTool()
         if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
     else
@@ -658,22 +658,6 @@ local BlacklistDrop = KillerTab:Dropdown({
         BlacklistSelected = v
     end
 })
-
--- 4. Kill Aura (depois das duas listas)
-KillerTab:Toggle({ Title = "Kill Aura", Value = false, Callback = function(v)
-    AutoKillAura = v
-    Flags.AutoPunch = v or AutoKillAll
-    
-    if v or AutoKillAll then
-        local tool = getPunchTool()
-        if tool and tool.Parent == LP.Backpack then tool.Parent = Character end
-    else
-        pcall(function()
-            local equipped = Character:FindFirstChildWhichIsA("Tool")
-            if equipped and isPunchTool(equipped) then equipped.Parent = LP.Backpack end
-        end)
-    end
-end})
 
 KillerTab:Button({
     Title = "Atualizar Jogadores",
@@ -783,64 +767,6 @@ MiscTab:Toggle({
     end 
 })
 
--- MODO LEVE / FPS BOOST
-local modoLeveAtivo = false
-local conexaoEfeitos = nil
-
-MiscTab:Toggle({
-    Title = "Modo Leve",
-    Value = false,
-    Callback = function(Value)
-        modoLeveAtivo = Value
-        local Lighting = game:GetService("Lighting")
-        
-        if Value then
-            pcall(function()
-                Lighting.GlobalShadows = false
-                Lighting.FogEnd = 9e9
-                
-                for _, effect in ipairs(Lighting:GetChildren()) do
-                    if effect:IsA("PostEffect") or effect:IsA("BloomEffect") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") or effect:IsA("SunRaysEffect") or effect:IsA("DepthOfFieldEffect") then
-                        effect.Enabled = false
-                    end
-                end
-            end)
-
-            local function otimizarObjeto(obj)
-                if obj:IsA("ParticleEmitter") or obj:IsA("Sparkles") or obj:IsA("Smoke") or obj:IsA("Fire") then
-                    obj.Enabled = false
-                elseif obj:IsA("Decal") or obj:IsA("Texture") then
-                    obj.Transparency = 1
-                elseif obj:IsA("BasePart") then
-                    obj.CastShadow = false
-                    if obj.Material == Enum.Material.Neon then
-                        obj.Material = Enum.Material.SmoothPlastic
-                    end
-                end
-            end
-
-            for _, obj in ipairs(workspace:GetDescendants()) do
-                pcall(otimizarObjeto, obj)
-            end
-
-            conexaoEfeitos = workspace.DescendantAdded:Connect(function(obj)
-                if modoLeveAtivo then
-                    pcall(otimizarObjeto, obj)
-                end
-            end)
-        else
-            if conexaoEfeitos then
-                conexaoEfeitos:Disconnect()
-                conexaoEfeitos = nil
-            end
-            
-            pcall(function()
-                Lighting.GlobalShadows = true
-            end)
-        end
-    end
-})
-
 -- Adicionar isso na sessão da MiscTab
 local BlackScreenGui = Instance.new("ScreenGui")
 BlackScreenGui.Name = "BlackScreenGui"
@@ -892,6 +818,66 @@ for _, entry in ipairs(ROCKS) do
         end,
     })
 end
+
+-- ABA: OUTROS
+local OutrosTab = Window:Tab({ Title = "Outros", Icon = "ellipsis" })
+
+OutrosTab:Toggle({
+    Title = "Walk on water",
+    Value = false,
+    Callback = function(v)
+        if v then
+            local posA = Vector3.new(25070, -11, 24967)
+            local posB = Vector3.new(-24925, -11, -25025)
+
+            -- Delimitação exata da área
+            local minX = math.min(posA.X, posB.X)
+            local maxX = math.max(posA.X, posB.X)
+            local minZ = math.min(posA.Z, posB.Z)
+            local maxZ = math.max(posA.Z, posB.Z)
+            local minY = math.min(posA.Y, posB.Y)
+            local maxY = math.max(posA.Y, posB.Y)
+
+            local height = math.max((maxY - minY) + 2, 4)
+            local centerY = (minY + maxY) / 2
+
+            -- Remove plataforma anterior se já existir
+            local oldFolder = workspace:FindFirstChild("PlataformaAzulExata")
+            if oldFolder then oldFolder:Destroy() end
+
+            local folder = Instance.new("Folder")
+            folder.Name = "PlataformaAzulExata"
+            folder.Parent = workspace
+
+            local chunkSize = 2000 -- Tamanho do bloco (abaixo do limite de 2048 studs)
+
+            for x = minX, maxX, chunkSize do
+                local currentChunkX = math.min(chunkSize, maxX - x)
+                if currentChunkX <= 0 then break end
+                local posX = x + (currentChunkX / 2)
+
+                for z = minZ, maxZ, chunkSize do
+                    local currentChunkZ = math.min(chunkSize, maxZ - z)
+                    if currentChunkZ <= 0 then break end
+                    local posZ = z + (currentChunkZ / 2)
+
+                    local part = Instance.new("Part")
+                    part.Size = Vector3.new(currentChunkX, height, currentChunkZ)
+                    part.Position = Vector3.new(posX, centerY, posZ)
+                    part.Anchored = true
+                    part.CanCollide = true
+                    part.Transparency = 1
+                    part.Color = Color3.fromRGB(135, 206, 250)
+                    part.Material = Enum.Material.SmoothPlastic
+                    part.Parent = folder
+                end
+            end
+        else
+            local oldFolder = workspace:FindFirstChild("PlataformaAzulExata")
+            if oldFolder then oldFolder:Destroy() end
+        end
+    end
+})
 
 -- ──────────────────────────────────────────────────────────────────
 -- 5. LOOPS E CONEXÕES DE EVENTOS
