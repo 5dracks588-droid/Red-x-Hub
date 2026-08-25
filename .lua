@@ -800,59 +800,45 @@ end
 -- ABA: OUTROS
 local OutrosTab = Window:Tab({ Title = "Outros", Icon = "ellipsis" })
 
+local waterPlatform = nil
+local waterConnection = nil
+
 OutrosTab:Toggle({
     Title = "Walk on water",
     Value = false,
     Callback = function(v)
         if v then
-            local posA = Vector3.new(25070, -11, 24967)
-            local posB = Vector3.new(-24925, -11, -25025)
+            -- Limpa conexões/plataformas antigas se existirem
+            if waterConnection then waterConnection:Disconnect(); waterConnection = nil end
+            if waterPlatform then waterPlatform:Destroy(); waterPlatform = nil end
 
-            -- Delimitação exata da área
-            local minX = math.min(posA.X, posB.X)
-            local maxX = math.max(posA.X, posB.X)
-            local minZ = math.min(posA.Z, posB.Z)
-            local maxZ = math.max(posA.Z, posB.Z)
-            local minY = math.min(posA.Y, posB.Y)
-            local maxY = math.max(posA.Y, posB.Y)
+            -- Cria a plataforma mini (20x1x20)
+            waterPlatform = Instance.new("Part")
+            waterPlatform.Name = "MiniWalkOnWaterPlatform"
+            waterPlatform.Size = Vector3.new(20, 1, 20)
+            waterPlatform.Anchored = true
+            waterPlatform.CanCollide = true
+            waterPlatform.Transparency = 1
+            waterPlatform.Color = Color3.fromRGB(135, 206, 250)
+            waterPlatform.Material = Enum.Material.SmoothPlastic
+            waterPlatform.Parent = workspace
 
-            local height = math.max((maxY - minY) + 2, 4)
-            local centerY = (minY + maxY) / 2
-
-            -- Remove plataforma anterior se já existir
-            local oldFolder = workspace:FindFirstChild("PlataformaAzulExata")
-            if oldFolder then oldFolder:Destroy() end
-
-            local folder = Instance.new("Folder")
-            folder.Name = "PlataformaAzulExata"
-            folder.Parent = workspace
-
-            local chunkSize = 2000 -- Tamanho do bloco (abaixo do limite de 2048 studs)
-
-            for x = minX, maxX, chunkSize do
-                local currentChunkX = math.min(chunkSize, maxX - x)
-                if currentChunkX <= 0 then break end
-                local posX = x + (currentChunkX / 2)
-
-                for z = minZ, maxZ, chunkSize do
-                    local currentChunkZ = math.min(chunkSize, maxZ - z)
-                    if currentChunkZ <= 0 then break end
-                    local posZ = z + (currentChunkZ / 2)
-
-                    local part = Instance.new("Part")
-                    part.Size = Vector3.new(currentChunkX, height, currentChunkZ)
-                    part.Position = Vector3.new(posX, centerY, posZ)
-                    part.Anchored = true
-                    part.CanCollide = true
-                    part.Transparency = 1
-                    part.Color = Color3.fromRGB(135, 206, 250)
-                    part.Material = Enum.Material.SmoothPlastic
-                    part.Parent = folder
+            -- Segue o personagem no X e Z com Y fixado em 11
+            waterConnection = RunService.RenderStepped:Connect(function()
+                if waterPlatform and Character and HRP then
+                    waterPlatform.Position = Vector3.new(HRP.Position.X, -9, HRP.Position.Z)
                 end
-            end
+            end)
         else
-            local oldFolder = workspace:FindFirstChild("PlataformaAzulExata")
-            if oldFolder then oldFolder:Destroy() end
+            -- Desativa a função e remove a plataforma
+            if waterConnection then
+                waterConnection:Disconnect()
+                waterConnection = nil
+            end
+            if waterPlatform then
+                waterPlatform:Destroy()
+                waterPlatform = nil
+            end
         end
     end
 })
