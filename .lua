@@ -3,7 +3,7 @@ local WindUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Footag
 local Window = WindUI:CreateWindow({
     Title = "Muscle Legends | Red x Hub", 
     Icon = "crown",
-    Author = "ʀᴇᴅ", 
+    Author = "RED", 
     Folder = "MuscleLegendsConfig",
     Size = UDim2.fromOffset(580,430),
     Transparent = false,
@@ -660,7 +660,7 @@ local BlacklistDrop = KillerTab:Dropdown({
 })
 
 KillerTab:Button({
-    Title = "Atualizar Jogadores",
+    Title = "Update list",
     Callback = function()
         local names = GetKillerPlayerNames()
         WhitelistDrop:Refresh(names)
@@ -719,7 +719,7 @@ local function updatePlayerStatsDisplay()
 end
 
 local PlayerDropdown = MiscTab:Dropdown({ Title = "Selecionar Jogador", Values = GetPlayerNames(), Value = "None", Callback = function(v) selectedPlayerObj = v; updatePlayerStatsDisplay() end })
-MiscTab:Button({ Title = "Atualizar Lista", Callback = function()
+MiscTab:Button({ Title = "Update list", Callback = function()
     PlayerDropdown:Refresh(GetPlayerNames())
     PlayerDropdown:Set("None")
     selectedPlayerObj = "None"
