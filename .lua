@@ -843,11 +843,12 @@ OutrosTab:Toggle({
     end
 })
 
--- Adicionar isso na sessão da MiscTab
+-- Adicionar isso na sessão da OutrosTab
 local BlackScreenGui = Instance.new("ScreenGui")
 BlackScreenGui.Name = "BlackScreenGui"
 BlackScreenGui.IgnoreGuiInset = true
 BlackScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+BlackScreenGui.ResetOnSpawn = false -- ISSO IMPEDE QUE A TELA QUEBRE AO MORRER
 BlackScreenGui.Enabled = false
 BlackScreenGui.Parent = LP:WaitForChild("PlayerGui")
 
@@ -861,7 +862,9 @@ OutrosTab:Toggle({
     Title = "Black Screen",
     Value = false,
     Callback = function(Value)
-        BlackScreenGui.Enabled = Value
+        if BlackScreenGui then
+            BlackScreenGui.Enabled = Value
+        end
     end
 })
 
