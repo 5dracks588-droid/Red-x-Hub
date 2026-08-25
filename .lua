@@ -899,7 +899,7 @@ task.spawn(function()
     end
 end)
 
--- LOOP DE ATAQUE (KILL ALL & KILL AURA)
+-- LOOP DE ATAQUE (TELEPORT ULTRA FAST KILL AURA)
 task.spawn(function()
     local targetIndex = 1
     
@@ -929,10 +929,10 @@ task.spawn(function()
         return false
     end
     
-    while task.wait(0.05) do
+    while task.wait() do
         local isAttackActive = AutoKillAll or AutoKillAura
         
-        if isAttackActive and Character and Humanoid and Humanoid.Health > 0 then
+        if isAttackActive and Character and Humanoid and Humanoid.Health > 0 and HRP then
             local arm = Character:FindFirstChild("Right Arm") or Character:FindFirstChild("RightHand") or Character:FindFirstChild("RightLowerArm")
             
             if arm then
@@ -942,12 +942,9 @@ task.spawn(function()
                 for _, p in ipairs(Players:GetPlayers()) do
                     if p ~= LP then
                         local onBlacklist = inList(BlacklistSelected, p.Name)
-                        local onWhitelist = inList(WhitelistSelected, p.Name)
-
-                        -- Blacklist sempre ignora o alvo
                         if onBlacklist then continue end 
                         
-                        -- Se for Kill Aura (sem Kill All), respeita a Whitelist caso esteja ativa
+                        local onWhitelist = inList(WhitelistSelected, p.Name)
                         if not AutoKillAll and whitelistActive and not onWhitelist then continue end
 
                         local pChar = p.Character
@@ -971,12 +968,16 @@ task.spawn(function()
                         
                         if targetRoot and targetHum and targetHum.Health > 0 then
                             local startTime = tick()
-                            while (tick() - startTime) < 0.2 and (AutoKillAll or AutoKillAura) and Character and Humanoid and Humanoid.Health > 0 and targetHum.Health > 0 do
+                            
+                            -- Foca no jogador por 0.2s trocando a posição instantaneamente em cada frame
+                            while (tick() - startTime) < 0.25 and (AutoKillAll or AutoKillAura) and Character and Humanoid and Humanoid.Health > 0 and targetHum.Health > 0 do
                                 pcall(function()
+                                    HRP.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 2.5)
                                     firetouchinterest(arm, targetRoot, 0)
                                     firetouchinterest(arm, targetRoot, 1)
                                 end)
-                                task.wait(0.02)
+                                
+                                task.wait() -- Executa a cada frame sem atraso fixo
                             end
                         end
                     end
